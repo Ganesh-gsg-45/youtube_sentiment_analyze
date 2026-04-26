@@ -1,0 +1,29 @@
+data_ingestion:
+  test_size: 0.20
+
+model_building:
+  # Word-level TF-IDF
+  ngram_range: [1, 3]
+  max_features: 30000        # Increased from 1000 → bigger vocabulary = better accuracy
+
+  # Character-level TF-IDF (catches slang, typos, subword patterns)
+  char_ngram_range: [2, 5]
+  char_max_features: 20000
+
+  # LightGBM hyperparameters
+  learning_rate: 0.09
+  max_depth: 20
+  n_estimators: 367
+
+  # LinearSVC
+  svc_c: 1.0
+
+  # LogisticRegression
+  lr_c: 5.0
+
+youtube_data:
+  video_ids:
+    - "dQw4w9WgXcQ"  # Replace with actual YouTube video IDs
+  max_comments_per_video: 1000
+  max_videos: 5
+  api_key_env: "YOUTUBE_API_KEY"

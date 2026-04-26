@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Analysis - MLOps</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-brain"></i>
+                <h1>Sentiment Analysis</h1>
+            </div>
+            <p class="subtitle">MLOps Pipeline - Reddit Comment Sentiment Classifier</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Input Section -->
+            <section class="input-section">
+                <div class="card">
+                    <h2><i class="fas fa-comment-dots"></i> Analyze Text</h2>
+                    <p class="description">Enter a comment or text to analyze its sentiment (Negative, Neutral, or Positive).</p>
+                    
+                    <form id="predictionForm" method="POST" action="/predict">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="textarea-wrapper">
+                            <textarea 
+                                name="text" 
+                                id="inputText" 
+                                placeholder="Type your text here... (e.g., 'This is an amazing product!')"
+                                rows="4"
+                                required
+                            ></textarea>
+                            <div class="char-count"><span id="charCount">0</span> / 500</div>
+                        </div>
+                        
+                        <div class="button-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-magic"></i> Analyze Sentiment
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                                <i class="fas fa-trash"></i> Clear
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Loading Spinner -->
+                    <div id="loading" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p>Analyzing sentiment...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- YouTube Input Section -->
+            <section class="input-section">
+                <div class="card">
+                    <h2><i class="fab fa-youtube" style="color: #ff0000;"></i> Analyze YouTube Video</h2>
+                    <p class="description">Paste a YouTube video URL to analyze the sentiment of its comments.</p>
+                    
+                    <form id="youtubeForm" method="POST" action="/youtube-analyze">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="textarea-wrapper">
+                            <input 
+                                type="url" 
+                                name="video_url" 
+                                id="videoUrl" 
+                                placeholder="https://www.youtube.com/watch?v=..."
+                                style="width: 100%; padding: 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 1rem; font-family: inherit;"
+                                required
+                            >
+                        </div>
+                        
+                        <div class="button-group">
+                            <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);">
+                                <i class="fab fa-youtube"></i> Analyze Comments
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- YouTube Loading Spinner -->
+                    <div id="youtubeLoading" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p>Fetching and analyzing comments...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Result Section -->
+            <section id="resultSection" class="result-section {% if not result %}hidden{% endif %}">
+                <div class="card result-card sentiment-{{ result.sentiment|lower if result else 'neutral' }}">
+                    <h2><i class="fas fa-chart-pie"></i> Analysis Result</h2>
+                    
+                    <div class="result-content">
+                        <div class="sentiment-badge">
+                            <i class="fas fa-{{ result.icon if result else 'circle' }}"></i>
+                            <span class="sentiment-label">{{ result.sentiment if result else 'Unknown' }}</span>
+                        </div>
+                        
+                        <div class="confidence-bar">
+                            <div class="confidence-label">
+                                <span>Confidence</span>
+                                <span class="confidence-value">{{ "%.2f"|format(result.confidence * 100) if result else '0' }}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ (result.confidence * 100) if result else '0' }}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="details">
+                            <div class="detail-item">
+                                <span class="detail-label">Original Text:</span>
+                                <p class="detail-text">{{ result.text if result else '' }}</p>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Processed Text:</span>
+                                <p class="detail-text processed">{{ result.processed_text if result else '' }}</p>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Predicted Label:</span>
+                                <span class="detail-value">{{ result.predicted_label if result else '' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- YouTube Result Section -->
+            <section id="youtubeResultSection" class="result-section {% if not youtube_result and not youtube_error %}hidden{% endif %}">
+                <div class="card">
+                    <h2><i class="fab fa-youtube" style="color: #ff0000;"></i> YouTube Analysis Result</h2>
+                    
+                    {% if youtube_error %}
+                    <div class="result-content">
+                        <div style="background: #fff5f5; border: 1px solid #feb2b2; color: #c53030; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+                            <strong>YouTube API Error:</strong> {{ youtube_error }}
+                        </div>
+                        <p style="color: #718096; font-size: 0.9rem;">
+                            If you see "accessNotConfigured", please enable the YouTube Data API v3 in your 
+                            <a href="https://console.cloud.google.com/apis/api/youtube.googleapis.com/overview" target="_blank" style="color: #3182ce;">Google Cloud Console</a>.
+                        </p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if youtube_result %}
+                    <div class="result-content">
+                        <div class="detail-item" style="margin-bottom: 20px;">
+                            <span class="detail-label">Video:</span>
+                            <p class="detail-text" style="font-weight: 600;">{{ youtube_result.video_title }}</p>
+                            <p class="detail-text" style="font-size: 0.9rem; color: #718096;">{{ youtube_result.channel }} • {{ youtube_result.total_comments_fetched }} comments analyzed</p>
+                        </div>
+
+                        <!-- Video Analytics Metrics -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 12px; text-align: center;">
+                                <i class="fas fa-eye" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+                                <div style="font-size: 1.3rem; font-weight: 700;">{{ "{:,}".format(youtube_result.view_count) }}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.9;">Views</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%); color: white; padding: 16px; border-radius: 12px; text-align: center;">
+                                <i class="fas fa-thumbs-up" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+                                <div style="font-size: 1.3rem; font-weight: 700;">{{ "{:,}".format(youtube_result.like_count) }}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.9;">Likes</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; padding: 16px; border-radius: 12px; text-align: center;">
+                                <i class="fas fa-comments" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+                                <div style="font-size: 1.3rem; font-weight: 700;">{{ "{:,}".format(youtube_result.comment_count) }}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.9;">Comments</div>
+                            </div>
+                        </div>
+
+                        <!-- Sentiment Distribution -->
+                        <h3 style="font-size: 1rem; margin-bottom: 16px; color: #2d3748;">Sentiment Distribution</h3>
+                        
+                        {% for sentiment, data in youtube_result.sentiment_distribution.items() %}
+                        <div class="confidence-bar" style="margin-bottom: 12px;">
+                            <div class="confidence-label">
+                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-{{ 'smile' if sentiment == 'Positive' else 'frown' if sentiment == 'Negative' else 'meh' }}"></i>
+                                    {{ sentiment }}
+                                </span>
+                                <span class="confidence-value">{{ data.count }} ({{ data.percentage }}%)</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ data.percentage }}%; background: {{ '#48bb78' if sentiment == 'Positive' else '#f56565' if sentiment == 'Negative' else '#ed8936' }};"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Top Comments -->
+                        {% if youtube_result.top_positive_comments %}
+                        <div class="detail-item" style="margin-top: 24px;">
+                            <span class="detail-label" style="color: #48bb78;"><i class="fas fa-thumbs-up"></i> Top Positive Comments:</span>
+                            {% for comment in youtube_result.top_positive_comments %}
+                            <div style="background: #f0fff4; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #48bb78;">
+                                <p style="font-size: 0.9rem; margin-bottom: 4px;">{{ comment.text }}</p>
+                                <p style="font-size: 0.8rem; color: #718096;">@{{ comment.author }} • {{ "%.0f"|format(comment.confidence * 100) }}% confidence • {{ comment.likes }} likes</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {% if youtube_result.top_negative_comments %}
+                        <div class="detail-item" style="margin-top: 16px;">
+                            <span class="detail-label" style="color: #f56565;"><i class="fas fa-thumbs-down"></i> Top Negative Comments:</span>
+                            {% for comment in youtube_result.top_negative_comments %}
+                            <div style="background: #fff5f5; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #f56565;">
+                                <p style="font-size: 0.9rem; margin-bottom: 4px;">{{ comment.text }}</p>
+                                <p style="font-size: 0.8rem; color: #718096;">@{{ comment.author }} • {{ "%.0f"|format(comment.confidence * 100) }}% confidence • {{ comment.likes }} likes</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section class="history-section">
+                <div class="card">
+                    <h2><i class="fas fa-history"></i> Recent Predictions</h2>
+                    
+                    {% if history %}
+                    <div class="history-list">
+                        {% for item in history %}
+                        <div class="history-item sentiment-{{ item.sentiment|lower }}">
+                            <div class="history-text">{{ item.text[:80] }}{% if item.text|length > 80 %}...{% endif %}</div>
+                            <div class="history-meta">
+                                <span class="history-badge">{{ item.sentiment }}</span>
+                                <span class="history-confidence">{{ "%.0f"|format(item.confidence * 100) }}%</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="empty-state">No predictions yet. Start analyzing text above!</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Model Info Section -->
+            <section class="info-section">
+                <div class="card info-card">
+                    <h2><i class="fas fa-info-circle"></i> Model Information</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Model:</span>
+                            <span class="info-value">{{ model_info.name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Accuracy:</span>
+                            <span class="info-value">{{ "%.2f"|format(model_info.accuracy * 100) }}%</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">F1-Score:</span>
+                            <span class="info-value">{{ "%.2f"|format(model_info.f1 * 100) }}%</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Features:</span>
+                            <span class="info-value">{{ model_info.features }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Classes:</span>
+                            <span class="info-value">Negative (-1), Neutral (0), Positive (1)</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built with <i class="fas fa-heart"></i> using Flask, scikit-learn & MLflow</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

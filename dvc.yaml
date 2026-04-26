@@ -1,0 +1,105 @@
+stages:
+  data_ingestion:
+    cmd: python -m src.data.data_ingestion
+    deps:
+      - src/data/data_ingestion.py
+      - src/utils/common.py
+      - params.yaml
+    outs:
+      - data/interim/train_processed.csv
+      - data/interim/test_processed.csv
+    params:
+      - data_ingestion.test_size
+
+  data_validation:
+    cmd: python -m src.data.data_validation
+    deps:
+      - src/data/data_validation.py
+      - src/utils/common.py
+      - data/interim/train_processed.csv
+      - data/interim/test_processed.csv
+      - params.yaml
+    outs:
+      - reports/data_validation_report.csv
+
+  youtube_data_extraction:
+    cmd: python -m src.data.youtube_data_extractor
+    deps:
+      - src/data/youtube_data_extractor.py
+      - src/utils/common.py
+      - params.yaml
+    outs:
+      - data/raw/youtube_comments_latest.csv
+    params:
+      - youtube_data.video_ids
+      - youtube_data.max_comments_per_video
+      - youtube_data.max_videos
+
+  youtube_data_cleaning:
+    cmd: python -m src.data.youtube_data_cleaner
+    deps:
+      - src/data/youtube_data_cleaner.py
+      - src/utils/common.py
+      - data/raw/youtube_comments_latest.csv
+    outs:
+      - data/interim/youtube_cleaned.csv
+
+  youtube_labeling:
+    cmd: python -m src.data.youtube_pseudo_labeler
+    deps:
+      - src/data/youtube_pseudo_labeler.py
+      - src/utils/common.py
+      - data/interim/youtube_cleaned.csv
+    outs:
+      - data/interim/youtube_labeled.csv
+
+
+  data_transformation:
+    cmd: python -m src.data.data_transformation
+    deps:
+      - src/data/data_transformation.py
+      - src/utils/common.py
+      - data/interim/train_processed.csv
+      - data/interim/test_processed.csv
+      - data/interim/youtube_labeled.csv
+      - params.yaml
+
+    outs:
+      - data/processed/X_train.pkl
+      - data/processed/X_test.pkl
+      - data/processed/y_train.pkl
+      - data/processed/y_test.pkl
+      - data/processed/vectorizer.pkl
+    params:
+      - model_building.ngram_range
+      - model_building.max_features
+
+  model_trainer:
+    cmd: python -m src.models.model_trainer
+    deps:
+      - src/models/model_trainer.py
+      - src/utils/common.py
+      - data/processed/X_train.pkl
+      - data/processed/y_train.pkl
+      - params.yaml
+    outs:
+      - models/best_model.pkl
+      - models/best_model_info.json
+      - models/model_comparison.csv
+    params:
+      - model_building.learning_rate
+      - model_building.max_depth
+      - model_building.n_estimators
+
+  model_evaluation:
+    cmd: python -m src.models.model_evaluation
+    deps:
+      - src/models/model_evaluation.py
+      - src/utils/common.py
+      - models/best_model.pkl
+      - data/processed/X_test.pkl
+      - data/processed/y_test.pkl
+    outs:
+      - reports/model_evaluation_report.txt
+      - reports/best_model_classification_report.csv
+      - reports/best_model_confusion_matrix.png
