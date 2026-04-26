@@ -6,7 +6,8 @@ import secrets
 import logging
 from pathlib import Path
 from datetime import datetime
-from collections import deque
+from collections import deque, Counter
+import math
 
 from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify
 from flask_limiter import Limiter
@@ -103,7 +104,7 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://i.ytimg.com https://img.youtube.com;"
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
     return response
@@ -290,6 +291,125 @@ def get_history():
     }
 
 
+# Common English stop words for keyword extraction
+STOP_WORDS = {
+    'the','a','an','and','or','but','in','on','at','to','for','of','with',
+    'is','are','was','were','be','been','being','have','has','had','do','does',
+    'did','will','would','could','should','may','might','shall','can','need',
+    'i','you','he','she','it','we','they','me','him','her','us','them',
+    'my','your','his','its','our','their','this','that','these','those',
+    'what','which','who','how','when','where','why','not','no','so','if',
+    'just','like','very','really','also','get','got','then','than','more',
+    'some','all','one','two','new','good','great','video','watch','comment',
+    'from','about','up','out','as','by','im','its','dont','its','this',
+    'here','there','now','make','way','see','know','think','time','people'
+}
+
+
+def extract_keywords(comment_results: list, top_n: int = 20) -> list:
+    """Extract top N keywords from comment texts."""
+    word_freq = Counter()
+    for c in comment_results:
+        words = re.findall(r'\b[a-zA-Z]{3,}\b', c['text'].lower())
+        for w in words:
+            if w not in STOP_WORDS:
+                word_freq[w] += 1
+    
+    keywords = []
+    max_count = word_freq.most_common(1)[0][1] if word_freq else 1
+    for word, count in word_freq.most_common(top_n):
+        # Normalize size 1-5 for visual weight in cloud
+        size = max(1, min(5, math.ceil(count / max_count * 5)))
+        keywords.append({'word': word, 'count': count, 'size': size})
+    return keywords
+
+
+def compute_trend_data(comment_results: list, segments: int = 5) -> dict:
+    """Split comments into time-ordered segments and compute sentiment % per segment."""
+    total = len(comment_results)
+    if total < segments:
+        segments = max(1, total)
+    
+    chunk_size = math.ceil(total / segments)
+    labels = []
+    pos_data, neg_data, neu_data = [], [], []
+    
+    for i in range(segments):
+        chunk = comment_results[i * chunk_size: (i + 1) * chunk_size]
+        if not chunk:
+            continue
+        n = len(chunk)
+        pos = round(sum(1 for c in chunk if c['sentiment'] == 'Positive') / n * 100, 1)
+        neg = round(sum(1 for c in chunk if c['sentiment'] == 'Negative') / n * 100, 1)
+        neu = round(sum(1 for c in chunk if c['sentiment'] == 'Neutral') / n * 100, 1)
+        labels.append(f'Seg {i + 1}')
+        pos_data.append(pos)
+        neg_data.append(neg)
+        neu_data.append(neu)
+    
+    return {'labels': labels, 'positive': pos_data, 'negative': neg_data, 'neutral': neu_data}
+
+
+def generate_insights(sentiment_distribution: dict, total: int, keywords: list) -> list:
+    """Generate human-readable insight bullets from the analysis."""
+    insights = []
+    pos_pct = sentiment_distribution['Positive']['percentage']
+    neg_pct = sentiment_distribution['Negative']['percentage']
+    neu_pct = sentiment_distribution['Neutral']['percentage']
+    pos_conf = sentiment_distribution['Positive']['avg_confidence']
+    neg_conf = sentiment_distribution['Negative']['avg_confidence']
+
+    # Dominant sentiment
+    dominant = max(sentiment_distribution, key=lambda k: sentiment_distribution[k]['percentage'])
+    insights.append({
+        'icon': 'fa-chart-pie',
+        'text': f"{pos_pct}% of {total} analyzed comments are positive — the audience response is {'overwhelmingly' if pos_pct > 70 else 'mostly' if pos_pct > 50 else 'somewhat'} positive."
+        if dominant == 'Positive' else
+        f"{neg_pct}% of {total} comments are negative — the audience has {'strong' if neg_pct > 60 else 'notable'} criticism."
+        if dominant == 'Negative' else
+        f"{neu_pct}% of {total} comments are neutral — the audience is largely indifferent or informational."
+    })
+
+    # Confidence insight
+    if pos_conf > 0.7:
+        insights.append({'icon': 'fa-star', 'text': f"High model confidence ({pos_conf*100:.0f}%) on positive comments — sentiment is clear and unambiguous."})
+    if neg_conf > 0.7:
+        insights.append({'icon': 'fa-exclamation-triangle', 'text': f"Negative comments show strong conviction ({neg_conf*100:.0f}% confidence) — core concerns are clearly expressed."})
+
+    # Engagement mix
+    if pos_pct > 0 and neg_pct > 0:
+        ratio = round(pos_pct / neg_pct, 1) if neg_pct > 0 else float('inf')
+        insights.append({'icon': 'fa-balance-scale', 'text': f"Positive-to-negative ratio: {ratio}:1 — {'healthy engagement' if ratio >= 2 else 'mixed reception' if ratio >= 1 else 'more critics than fans'}."})
+
+    # Top keyword
+    if keywords:
+        top_word = keywords[0]['word']
+        insights.append({'icon': 'fa-key', 'text': f"Most discussed topic: \u2018{top_word}\u2019 — appears {keywords[0]['count']} times across comments."})
+
+    return insights
+
+
+def compute_final_score(sentiment_distribution: dict) -> dict:
+    """Compute a 0-100 audience sentiment score."""
+    pos = sentiment_distribution['Positive']['percentage']
+    neu = sentiment_distribution['Neutral']['percentage']
+    score = round((pos * 1.0 + neu * 0.5), 1)  # Max 100 when all positive
+    score = min(100, score)  # Clamp
+
+    if score >= 75:
+        label, color = 'Excellent', '#22c55e'
+    elif score >= 55:
+        label, color = 'Good', '#84cc16'
+    elif score >= 40:
+        label, color = 'Mixed', '#f59e0b'
+    elif score >= 25:
+        label, color = 'Poor', '#f97316'
+    else:
+        label, color = 'Critical', '#ef4444'
+    
+    return {'score': score, 'label': label, 'color': color}
+
+
 def analyze_youtube_video(video_url: str, max_comments: int = 200) -> dict:
     """
     Analyze sentiment of comments from a YouTube video.
@@ -330,6 +450,7 @@ def analyze_youtube_video(video_url: str, max_comments: int = 200) -> dict:
             'video_id': video_id,
             'video_title': video_details.get('title', 'Unknown'),
             'channel': video_details.get('channel', 'Unknown'),
+            'published_at': video_details.get('published_at', ''),
             'view_count': video_details.get('view_count', 0),
             'like_count': video_details.get('like_count', 0),
             'comment_count': video_details.get('comment_count', 0),
@@ -394,11 +515,18 @@ def analyze_youtube_video(video_url: str, max_comments: int = 200) -> dict:
         key=lambda x: x['confidence'],
         reverse=True
     )[:3]
+
+    # --- New enriched data ---
+    keywords = extract_keywords(comment_results, top_n=20)
+    trend_data = compute_trend_data(comment_results, segments=5)
+    insights = generate_insights(sentiment_distribution, total, keywords)
+    final_score = compute_final_score(sentiment_distribution)
     
     return {
         'video_id': video_id,
         'video_title': video_details.get('title', 'Unknown'),
         'channel': video_details.get('channel', 'Unknown'),
+        'published_at': video_details.get('published_at', ''),
         'view_count': video_details.get('view_count', 0),
         'like_count': video_details.get('like_count', 0),
         'comment_count': video_details.get('comment_count', 0),
@@ -406,13 +534,17 @@ def analyze_youtube_video(video_url: str, max_comments: int = 200) -> dict:
         'sentiment_distribution': sentiment_distribution,
         'top_positive_comments': top_positive,
         'top_negative_comments': top_negative,
-        'comments': comment_results[:50]  # Return first 50 for display
+        'comments': comment_results,  # All comments for tab display
+        'keywords': keywords,
+        'trend_data': trend_data,
+        'insights': insights,
+        'final_score': final_score
     }
 
 
 
 @app.route('/youtube-analyze', methods=['POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute")
 def youtube_analyze():
 
     """Analyze sentiment of YouTube video comments."""
@@ -483,11 +615,14 @@ def youtube_analyze():
             model_info=model_info
         )
     except Exception as e:
-        logger.error(f"YouTube analysis error: {e}")
+        import traceback
+        logger.error(f"YouTube analysis error: {type(e).__name__}: {e}")
+        logger.error(traceback.format_exc())
+        user_msg = f"Analysis error ({type(e).__name__}): {str(e)[:200]}"
         model_info = get_model_info()
         return render_template(
             'index.html',
-            youtube_error="An error occurred while analyzing the video. Please try again.",
+            youtube_error=user_msg,
             history=list(prediction_history),
             model_info=model_info
         )
