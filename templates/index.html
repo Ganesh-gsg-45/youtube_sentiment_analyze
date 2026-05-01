@@ -21,7 +21,48 @@
         <p class="subtitle">AI-Powered YouTube Comment Sentiment Analysis &amp; Audience Intelligence</p>
     </header>
 
+    <!-- ==================== PROJECT AIM ==================== -->
+    <section id="about">
+        <div class="card" style="background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.06));border-color:rgba(99,102,241,0.2);">
+            <h2><i class="fas fa-bullseye"></i> What is SentimentScope?</h2>
+            <p class="description" style="font-size:.97rem;margin-bottom:24px;">
+                SentimentScope is an <strong style="color:#a78bfa;">AI-powered sentiment analytics platform</strong> that helps creators, marketers, and researchers understand how audiences truly feel about any YouTube video — using a trained NLP + Machine Learning pipeline.
+            </p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;">
+                <div style="background:rgba(255,255,255,.04);border:1px solid rgba(239,68,68,.2);border-left:3px solid #ef4444;border-radius:14px;padding:16px;">
+                    <div style="font-size:.95rem;margin-bottom:4px;"><i class="fab fa-youtube" style="color:#ef4444;"></i> &nbsp;<strong>YouTube Comments Analysis</strong></div>
+                    <p style="font-size:.83rem;color:#94a3b8;">Fetches up to 200 real comments from any public video and classifies each as <span style="color:#22c55e;font-weight:600;">Positive</span>, <span style="color:#ef4444;font-weight:600;">Negative</span>, or <span style="color:#f59e0b;font-weight:600;">Neutral</span>.</p>
+                </div>
+                <div style="background:rgba(255,255,255,.04);border:1px solid rgba(139,92,246,.2);border-left:3px solid #8b5cf6;border-radius:14px;padding:16px;">
+                    <div style="font-size:.95rem;margin-bottom:4px;"><i class="fas fa-chart-pie" style="color:#8b5cf6;"></i> &nbsp;<strong>Audience Insights</strong></div>
+                    <p style="font-size:.83rem;color:#94a3b8;">Generates a Sentiment Score (0–100), trend charts, keyword clouds, and AI-generated audience insights.</p>
+                </div>
+                <div style="background:rgba(255,255,255,.04);border:1px solid rgba(99,102,241,.2);border-left:3px solid #6366f1;border-radius:14px;padding:16px;">
+                    <div style="font-size:.95rem;margin-bottom:4px;"><i class="fas fa-comment-dots" style="color:#6366f1;"></i> &nbsp;<strong>General Text Sentiment</strong></div>
+                    <p style="font-size:.83rem;color:#94a3b8;">Analyze any custom text instantly — paste a comment, review, or sentence and get a real-time prediction with confidence score.</p>
+                </div>
+            </div>
+            <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:20px;">
+                <p style="font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.08em;text-align:center;margin-bottom:16px;">How It Works</p>
+                <div style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;">
+                    <div style="text-align:center;padding:0 16px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);color:#818cf8;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">1</div><p style="font-size:.78rem;color:#64748b;">Paste YouTube URL</p></div>
+                    <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(99,102,241,.3),rgba(139,92,246,.3));min-width:24px;max-width:60px;"></div>
+                    <div style="text-align:center;padding:0 16px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.4);color:#a78bfa;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">2</div><p style="font-size:.78rem;color:#64748b;">Fetch &amp; preprocess comments</p></div>
+                    <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(139,92,246,.3),rgba(236,72,153,.3));min-width:24px;max-width:60px;"></div>
+                    <div style="text-align:center;padding:0 16px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(236,72,153,.2);border:1px solid rgba(236,72,153,.4);color:#f472b6;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">3</div><p style="font-size:.78rem;color:#64748b;">ML model classifies each</p></div>
+                    <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(236,72,153,.3),rgba(34,197,94,.3));min-width:24px;max-width:60px;"></div>
+                    <div style="text-align:center;padding:0 16px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#4ade80;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">4</div><p style="font-size:.78rem;color:#64748b;">Full insights dashboard</p></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- ==================== PANEL 1: URL INPUT ==================== -->
+    <div style="display:flex;align-items:center;gap:12px;margin:32px 0 16px;">
+        <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(239,68,68,.5),transparent);"></div>
+        <span style="padding:5px 16px;border-radius:999px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;"><i class="fab fa-youtube"></i> Step 1 &middot; Comments Sentiment Analysis</span>
+        <div style="flex:1;height:1px;background:linear-gradient(270deg,rgba(239,68,68,.5),transparent);"></div>
+    </div>
     <section id="panelInput">
         <div class="card yt-hero-card">
             <h2><i class="fab fa-youtube"></i> Analyze YouTube Video</h2>
@@ -331,6 +372,11 @@
     <hr class="divider">
 
     <!-- ==================== TEXT PREDICTION SECTION ==================== -->
+    <div style="display:flex;align-items:center;gap:12px;margin:32px 0 16px;">
+        <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(99,102,241,.5),transparent);"></div>
+        <span style="padding:5px 16px;border-radius:999px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);color:#818cf8;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;"><i class="fas fa-comment-dots"></i> Step 2 &middot; General Sentiment Analysis</span>
+        <div style="flex:1;height:1px;background:linear-gradient(270deg,rgba(99,102,241,.5),transparent);"></div>
+    </div>
     <section id="textPredictSection">
         <div class="card">
             <h2><i class="fas fa-comment-dots"></i> Single Text Analysis</h2>
