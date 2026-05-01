@@ -3,6 +3,51 @@
    ============================================================ */
 
 // ----------------------------------------------------------------
+// MAIN TAB SWITCHING (Video / Text)
+// ----------------------------------------------------------------
+function switchMainTab(tab) {
+    const videoBtn = document.getElementById('main-tab-video');
+    const textBtn  = document.getElementById('main-tab-text');
+    const heroVideo = document.getElementById('hero-video');
+    const heroText  = document.getElementById('hero-text');
+    const contentVideo = document.getElementById('content-video');
+    const contentText  = document.getElementById('content-text');
+
+    if (tab === 'video') {
+        videoBtn?.classList.add('active');
+        textBtn?.classList.remove('active');
+        heroVideo?.classList.remove('hidden');
+        heroText?.classList.add('hidden');
+        contentVideo?.classList.remove('hidden');
+        contentText?.classList.add('hidden');
+    } else {
+        videoBtn?.classList.remove('active');
+        textBtn?.classList.add('active');
+        heroVideo?.classList.add('hidden');
+        heroText?.classList.remove('hidden');
+        contentVideo?.classList.add('hidden');
+        contentText?.classList.remove('hidden');
+    }
+}
+
+// ----------------------------------------------------------------
+// MODEL INFO TOGGLE
+// ----------------------------------------------------------------
+function toggleModelInfo() {
+    const content = document.getElementById('modelInfoContent');
+    const icon = document.getElementById('modelInfoIcon');
+    if (!content || !icon) return;
+
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        content.classList.add('hidden');
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+
+// ----------------------------------------------------------------
 // TEXT PREDICTION FORM
 // ----------------------------------------------------------------
 const textarea   = document.getElementById('inputText');
@@ -75,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // ----------------------------------------------------------------
-// CHART.JS — DONUT CHART (Panel 3)
+// CHART.JS — DONUT CHART
 // ----------------------------------------------------------------
 function renderDonutChart(positive, negative, neutral) {
     const canvas = document.getElementById('donutChart');
@@ -117,7 +162,7 @@ function renderDonutChart(positive, negative, neutral) {
 }
 
 // ----------------------------------------------------------------
-// CHART.JS — TREND LINE CHART (Panel 4)
+// CHART.JS — TREND LINE CHART
 // ----------------------------------------------------------------
 function renderTrendChart(trendData) {
     const canvas = document.getElementById('trendChart');
@@ -218,7 +263,7 @@ function renderTrendChart(trendData) {
 }
 
 // ----------------------------------------------------------------
-// SCORE GAUGE — SVG Animated Circle (Panel 8)
+// SCORE GAUGE — SVG Animated Circle
 // ----------------------------------------------------------------
 function animateScoreGauge(score, color) {
     const circle     = document.getElementById('scoreFillCircle');
@@ -249,7 +294,7 @@ function animateScoreGauge(score, color) {
 }
 
 // ----------------------------------------------------------------
-// COMMENTS — Tab Switching & Pagination (Panel 7)
+// COMMENTS — Tab Switching & Pagination
 // ----------------------------------------------------------------
 let allComments   = [];
 let filteredComments = [];
@@ -286,7 +331,7 @@ function renderComments() {
     const totalPages = Math.ceil(filteredComments.length / PAGE_SIZE);
 
     if (slice.length === 0) {
-        container.innerHTML = '<p class="empty-state">No comments in this category.</p>';
+        container.innerHTML = '<p class="text-slate-500 text-center py-5">No comments in this category.</p>';
         pagination.innerHTML = '';
         return;
     }
@@ -299,16 +344,15 @@ function renderComments() {
         const textEsc   = escHtml(c.text);
         const author    = escHtml(c.author || 'Anonymous');
         return `
-            <div class="comment-card ${sent}">
-                <div class="comment-text">${textEsc}</div>
-                <div class="comment-meta">
-                    <span class="comment-author"><i class="fas fa-user-circle" style="color:var(--brand-3);"></i> @${author}</span>
-                    <span class="comment-badge ${sent}"><i class="fas ${icon}"></i> ${c.sentiment}</span>
-                    <span class="comment-confidence" title="Model confidence">
-                        <i class="fas fa-brain" style="color:${confColor}; font-size:0.8em;"></i>
-                        ${confPct}%
-                    </span>
-                    ${c.likes ? `<span class="comment-likes"><i class="fas fa-thumbs-up"></i> ${c.likes}</span>` : ''}
+            <div class="comment-item ${sent}">
+                <div class="flex-1 min-w-0">
+                    <div class="comment-author"><i class="fas fa-user-circle text-brand3 mr-1"></i> @${author}</div>
+                    <div class="comment-text">${textEsc}</div>
+                    <div class="comment-meta">
+                        <span class="comment-badge ${sent}"><i class="fas ${icon} mr-1"></i> ${c.sentiment}</span>
+                        <span class="text-xs text-slate-500" title="Model confidence"><i class="fas fa-brain mr-1" style="color:${confColor}"></i>${confPct}%</span>
+                        ${c.likes ? `<span class="comment-likes"><i class="fas fa-thumbs-up mr-1"></i>${c.likes}</span>` : ''}
+                    </div>
                 </div>
             </div>`;
     }).join('');
@@ -325,13 +369,13 @@ function renderComments() {
     let endP   = Math.min(totalPages, startP + windowSize - 1);
     if (endP - startP < windowSize - 1) startP = Math.max(1, endP - windowSize + 1);
 
-    if (startP > 1) pages += `<button class="page-btn" onclick="goPage(1)">1</button>${startP > 2 ? '<span style="color:var(--text-muted); padding: 0 4px;">…</span>' : ''}`;
+    if (startP > 1) pages += `<button class="page-btn" onclick="goPage(1)">1</button>${startP > 2 ? '<span class="text-slate-600 px-1">…</span>' : ''}`;
 
     for (let p = startP; p <= endP; p++) {
         pages += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
     }
 
-    if (endP < totalPages) pages += `${endP < totalPages - 1 ? '<span style="color:var(--text-muted); padding: 0 4px;">…</span>' : ''}<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+    if (endP < totalPages) pages += `${endP < totalPages - 1 ? '<span class="text-slate-600 px-1">…</span>' : ''}<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
 
     // Next
     pages += `<button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
@@ -350,15 +394,21 @@ function goPage(n) {
 function escHtml(str) {
     return String(str)
         .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"');
 }
 
 // ----------------------------------------------------------------
 // INITIALISE EVERYTHING ON DOMContentLoaded
 // ----------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
+
+    // Auto-switch to text tab if text result is present
+    const resultSection = document.getElementById('resultSection');
+    if (resultSection && !resultSection.classList.contains('hidden')) {
+        switchMainTab('text');
+    }
 
     // Only run if YouTube result data exists
     if (typeof YT_DATA === 'undefined') return;

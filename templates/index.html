@@ -3,533 +3,506 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Sentiment Analysis — MLOps Dashboard</title>
+    <title>SentimentScope — YouTube Sentiment Analysis Platform</title>
     <meta name="description" content="Analyze YouTube video comment sentiment with AI-powered natural language processing. Get pie charts, trend analysis, keyword clouds, and audience scores.">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#07071a',
+                        bg2: '#0e0e2a',
+                        bg3: '#13132e',
+                        brand: '#6366f1',
+                        brand2: '#8b5cf6',
+                        brand3: '#a78bfa',
+                        pos: '#22c55e',
+                        neg: '#ef4444',
+                        neu: '#f59e0b',
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
-<div class="container">
+<body class="bg-bg text-white min-h-screen font-['Inter'] antialiased">
 
-    <!-- ==================== HEADER ==================== -->
-    <header class="header">
-        <div class="logo">
-            <i class="fab fa-youtube"></i>
-            <h1>SentimentScope</h1>
-        </div>
-        <p class="subtitle">AI-Powered YouTube Comment Sentiment Analysis &amp; Audience Intelligence</p>
-    </header>
+    <!-- Background orbs -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
 
-    <!-- ==================== PROJECT AIM ==================== -->
-    <section id="about">
-        <div class="card" style="background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.06));border-color:rgba(99,102,241,0.2);">
-            <h2><i class="fas fa-bullseye"></i> What is SentimentScope?</h2>
-            <p class="description" style="font-size:.97rem;margin-bottom:24px;">
-                SentimentScope is an <strong style="color:#a78bfa;">AI-powered sentiment analytics platform</strong> that helps creators, marketers, and researchers understand how audiences truly feel about any YouTube video — using a trained NLP + Machine Learning pipeline.
+    <div class="relative z-10 max-w-6xl mx-auto px-4 pb-20">
+
+        <!-- ==================== HEADER ==================== -->
+        <header class="pt-12 pb-8 text-center">
+            <div class="flex items-center justify-center gap-3 mb-4 animate-fade-in">
+                <i class="fab fa-youtube text-3xl bg-gradient-to-br from-red-500 to-pink-500 bg-clip-text text-transparent"></i>
+                <h1 class="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    SentimentScope
+                </h1>
+            </div>
+            <p class="text-slate-400 text-lg max-w-xl mx-auto animate-fade-in" style="animation-delay: 0.1s;">
+                AI-Powered YouTube Comment Sentiment Analysis &amp; Audience Intelligence
             </p>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;">
-                <div style="background:rgba(255,255,255,.04);border:1px solid rgba(239,68,68,.2);border-left:3px solid #ef4444;border-radius:14px;padding:16px;">
-                    <div style="font-size:.95rem;margin-bottom:4px;"><i class="fab fa-youtube" style="color:#ef4444;"></i> &nbsp;<strong>YouTube Comments Analysis</strong></div>
-                    <p style="font-size:.83rem;color:#94a3b8;">Fetches up to 200 real comments from any public video and classifies each as <span style="color:#22c55e;font-weight:600;">Positive</span>, <span style="color:#ef4444;font-weight:600;">Negative</span>, or <span style="color:#f59e0b;font-weight:600;">Neutral</span>.</p>
-                </div>
-                <div style="background:rgba(255,255,255,.04);border:1px solid rgba(139,92,246,.2);border-left:3px solid #8b5cf6;border-radius:14px;padding:16px;">
-                    <div style="font-size:.95rem;margin-bottom:4px;"><i class="fas fa-chart-pie" style="color:#8b5cf6;"></i> &nbsp;<strong>Audience Insights</strong></div>
-                    <p style="font-size:.83rem;color:#94a3b8;">Generates a Sentiment Score (0–100), trend charts, keyword clouds, and AI-generated audience insights.</p>
-                </div>
-                <div style="background:rgba(255,255,255,.04);border:1px solid rgba(99,102,241,.2);border-left:3px solid #6366f1;border-radius:14px;padding:16px;">
-                    <div style="font-size:.95rem;margin-bottom:4px;"><i class="fas fa-comment-dots" style="color:#6366f1;"></i> &nbsp;<strong>General Text Sentiment</strong></div>
-                    <p style="font-size:.83rem;color:#94a3b8;">Analyze any custom text instantly — paste a comment, review, or sentence and get a real-time prediction with confidence score.</p>
-                </div>
-            </div>
-            <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:20px;">
-                <p style="font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.08em;text-align:center;margin-bottom:16px;">How It Works</p>
-                <div style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;">
-                    <div style="text-align:center;padding:0 16px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);color:#818cf8;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">1</div><p style="font-size:.78rem;color:#64748b;">Paste YouTube URL</p></div>
-                    <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(99,102,241,.3),rgba(139,92,246,.3));min-width:24px;max-width:60px;"></div>
-                    <div style="text-align:center;padding:0 16px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.4);color:#a78bfa;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">2</div><p style="font-size:.78rem;color:#64748b;">Fetch &amp; preprocess comments</p></div>
-                    <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(139,92,246,.3),rgba(236,72,153,.3));min-width:24px;max-width:60px;"></div>
-                    <div style="text-align:center;padding:0 16px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(236,72,153,.2);border:1px solid rgba(236,72,153,.4);color:#f472b6;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">3</div><p style="font-size:.78rem;color:#64748b;">ML model classifies each</p></div>
-                    <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(236,72,153,.3),rgba(34,197,94,.3));min-width:24px;max-width:60px;"></div>
-                    <div style="text-align:center;padding:0 16px;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#4ade80;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">4</div><p style="font-size:.78rem;color:#64748b;">Full insights dashboard</p></div>
-                </div>
-            </div>
-        </div>
-    </section>
+        </header>
 
-    <!-- ==================== PANEL 1: URL INPUT ==================== -->
-    <div style="display:flex;align-items:center;gap:12px;margin:32px 0 16px;">
-        <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(239,68,68,.5),transparent);"></div>
-        <span style="padding:5px 16px;border-radius:999px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;"><i class="fab fa-youtube"></i> Step 1 &middot; Comments Sentiment Analysis</span>
-        <div style="flex:1;height:1px;background:linear-gradient(270deg,rgba(239,68,68,.5),transparent);"></div>
-    </div>
-    <section id="panelInput">
-        <div class="card yt-hero-card">
-            <h2><i class="fab fa-youtube"></i> Analyze YouTube Video</h2>
-            <p class="description">Paste any YouTube video URL to get a full AI-powered audience sentiment breakdown — charts, insights, keywords &amp; a final score.</p>
-
-            <form id="youtubeForm" method="POST" action="/youtube-analyze">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="url-input-row">
-                    <input
-                        type="url"
-                        id="videoUrl"
-                        name="video_url"
-                        placeholder="https://www.youtube.com/watch?v=..."
-                        value="{{ request.form.get('video_url', '') }}"
-                        required
-                        autocomplete="off"
-                    >
-                    <button type="submit" class="btn btn-yt" id="ytSubmitBtn">
-                        <i class="fab fa-youtube"></i> Analyze Comments
-                    </button>
-                </div>
-            </form>
-
-            <div id="youtubeLoading" class="loading hidden" style="padding: 20px 0 0;">
-                <div class="spinner"></div>
-                <p style="color: var(--text-secondary); font-size: 0.92rem;">Fetching &amp; analyzing comments — this may take 10–20 seconds…</p>
-            </div>
-        </div>
-
-        <!-- Error banner -->
-        {% if youtube_error %}
-        <div class="flash-error">
-            <i class="fas fa-exclamation-triangle" style="margin-top:2px; flex-shrink:0;"></i>
-            <div>
-                <strong>Error:</strong> {{ youtube_error }}
-                <br><span style="font-size:0.85rem; opacity:0.8;">If you see "accessNotConfigured", enable the YouTube Data API v3 in your
-                <a href="https://console.cloud.google.com/apis/api/youtube.googleapis.com/overview" target="_blank">Google Cloud Console</a>.</span>
-            </div>
-        </div>
-        {% endif %}
-    </section>
-
-    <!-- ==================== YOUTUBE RESULT SECTIONS ==================== -->
-    {% if youtube_result %}
-    {% set yr = youtube_result %}
-    {% set sd = yr.sentiment_distribution %}
-
-    <!-- ==================== PANEL 2: VIDEO INFO ==================== -->
-    <section id="panelVideoInfo" class="yt-result-section visible">
-        <div class="card">
-            <h2><i class="fas fa-film"></i> Video Information</h2>
-
-            <div class="video-meta">
-                <img
-                    class="video-thumbnail"
-                    src="https://img.youtube.com/vi/{{ yr.video_id }}/mqdefault.jpg"
-                    alt="Video thumbnail"
-                    onerror="this.style.display='none'"
-                >
-                <div class="video-info-text">
-                    <div class="video-title" title="{{ yr.video_title }}">{{ yr.video_title }}</div>
-                    <div class="video-channel">
-                        <i class="fas fa-user-circle" style="color: var(--brand-3);"></i>
-                        {{ yr.channel }}
-                        {% if yr.published_at %}
-                        &nbsp;&bull;&nbsp;
-                        <i class="fas fa-calendar-alt" style="color: var(--text-muted);"></i>
-                        {{ yr.published_at[:10] }}
-                        {% endif %}
-                    </div>
-                    <div style="margin-top: 8px; font-size: 0.82rem; color: var(--text-muted);">
-                        <i class="fas fa-comments"></i> {{ yr.total_comments_fetched }} comments analyzed out of {{ "{:,}".format(yr.comment_count) }} total
-                    </div>
-                </div>
-            </div>
-
-            <div class="stat-tiles">
-                <div class="stat-tile views">
-                    <i class="fas fa-eye"></i>
-                    <span class="stat-value">{{ "{:,}".format(yr.view_count) }}</span>
-                    <span class="stat-label">Views</span>
-                </div>
-                <div class="stat-tile likes">
-                    <i class="fas fa-thumbs-up"></i>
-                    <span class="stat-value">{{ "{:,}".format(yr.like_count) }}</span>
-                    <span class="stat-label">Likes</span>
-                </div>
-                <div class="stat-tile comments">
-                    <i class="fas fa-comments"></i>
-                    <span class="stat-value">{{ "{:,}".format(yr.comment_count) }}</span>
-                    <span class="stat-label">Comments</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== PANEL 3: PIE CHART + SENTIMENT STATS ==================== -->
-    <section id="panelChart" class="yt-result-section visible">
-        <div class="card">
-            <h2><i class="fas fa-chart-pie"></i> Sentiment Distribution</h2>
-            <div class="chart-stats-grid">
-
-                <!-- Donut chart -->
-                <div class="chart-wrap">
-                    <div class="donut-container">
-                        <canvas id="donutChart"></canvas>
-                        <div class="donut-center-label">
-                            <span class="center-pct">{{ sd.Positive.percentage }}%</span>
-                            <span class="center-lbl">Positive</span>
-                        </div>
-                    </div>
-                    <div class="chart-legend">
-                        <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span>Positive</div>
-                        <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span>Negative</div>
-                        <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span>Neutral</div>
-                    </div>
-                </div>
-
-                <!-- Stat cards -->
-                <div class="sentiment-stat-cards">
-                    <div class="sentiment-stat-card positive">
-                        <div class="stat-card-icon"><i class="fas fa-smile"></i></div>
-                        <div class="stat-card-body">
-                            <div class="stat-card-name">Positive</div>
-                            <div class="stat-card-count">{{ sd.Positive.count }}</div>
-                            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
-                                Avg confidence: {{ "%.0f"|format(sd.Positive.avg_confidence * 100) }}%
-                            </div>
-                        </div>
-                        <span class="stat-card-pct">{{ sd.Positive.percentage }}%</span>
-                    </div>
-                    <div class="sentiment-stat-card negative">
-                        <div class="stat-card-icon"><i class="fas fa-frown"></i></div>
-                        <div class="stat-card-body">
-                            <div class="stat-card-name">Negative</div>
-                            <div class="stat-card-count">{{ sd.Negative.count }}</div>
-                            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
-                                Avg confidence: {{ "%.0f"|format(sd.Negative.avg_confidence * 100) }}%
-                            </div>
-                        </div>
-                        <span class="stat-card-pct">{{ sd.Negative.percentage }}%</span>
-                    </div>
-                    <div class="sentiment-stat-card neutral">
-                        <div class="stat-card-icon"><i class="fas fa-meh"></i></div>
-                        <div class="stat-card-body">
-                            <div class="stat-card-name">Neutral</div>
-                            <div class="stat-card-count">{{ sd.Neutral.count }}</div>
-                            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
-                                Avg confidence: {{ "%.0f"|format(sd.Neutral.avg_confidence * 100) }}%
-                            </div>
-                        </div>
-                        <span class="stat-card-pct">{{ sd.Neutral.percentage }}%</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== PANEL 4: TREND GRAPH ==================== -->
-    {% if yr.trend_data and yr.trend_data.labels|length > 1 %}
-    <section id="panelTrend" class="yt-result-section visible">
-        <div class="card">
-            <h2><i class="fas fa-chart-line"></i> Sentiment Trend</h2>
-            <p class="description" style="margin-bottom: 14px;">How sentiment evolves across comment segments (ordered by relevance).</p>
-            <div class="trend-container">
-                <canvas id="trendChart"></canvas>
-            </div>
-        </div>
-    </section>
-    {% endif %}
-
-    <!-- ==================== PANEL 5: INSIGHTS ==================== -->
-    {% if yr.insights %}
-    <section id="panelInsights" class="yt-result-section visible">
-        <div class="card">
-            <h2><i class="fas fa-lightbulb"></i> AI Insights</h2>
-            <div class="insights-list">
-                {% for insight in yr.insights %}
-                <div class="insight-item">
-                    <div class="insight-icon"><i class="fas {{ insight.icon }}"></i></div>
-                    <div class="insight-text">{{ insight.text }}</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </section>
-    {% endif %}
-
-    <!-- ==================== PANEL 6: KEYWORD CLOUD ==================== -->
-    {% if yr.keywords %}
-    <section id="panelKeywords" class="yt-result-section visible">
-        <div class="card">
-            <h2><i class="fas fa-tags"></i> Keywords &amp; Topics</h2>
-            <p class="description" style="margin-bottom:16px;">Top words extracted from all analyzed comments. Larger pills = more frequent.</p>
-            <div class="keyword-cloud">
-                {% for kw in yr.keywords %}
-                <span class="keyword-pill kw-size-{{ kw.size }}" title="{{ kw.count }} occurrences">
-                    {{ kw.word }}
-                    <span class="kw-count">{{ kw.count }}</span>
-                </span>
-                {% endfor %}
-            </div>
-        </div>
-    </section>
-    {% endif %}
-
-    <!-- ==================== PANEL 7: COMMENTS SECTION ==================== -->
-    {% if yr.comments %}
-    <section id="panelComments" class="yt-result-section visible">
-        <div class="card">
-            <h2><i class="fas fa-comments"></i> Comments</h2>
-
+        <!-- ==================== HERO INPUT SECTION ==================== -->
+        <section class="glass-card p-6 md:p-10 mb-8 animate-fade-in" style="animation-delay: 0.2s;">
             <!-- Tabs -->
-            <div class="comment-tabs">
-                <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">
-                    <i class="fas fa-list"></i> All
-                    <span class="tab-count">{{ yr.comments|length }}</span>
+            <div class="flex justify-center gap-2 mb-8">
+                <button onclick="switchMainTab('video')" id="main-tab-video" class="main-tab active">
+                    <i class="fab fa-youtube mr-2"></i> Analyze Video
                 </button>
-                <button class="tab-btn positive-tab" id="tab-positive" onclick="switchTab('positive')">
-                    <i class="fas fa-smile"></i> Positive
-                    <span class="tab-count">{{ sd.Positive.count }}</span>
-                </button>
-                <button class="tab-btn negative-tab" id="tab-negative" onclick="switchTab('negative')">
-                    <i class="fas fa-frown"></i> Negative
-                    <span class="tab-count">{{ sd.Negative.count }}</span>
-                </button>
-                <button class="tab-btn neutral-tab" id="tab-neutral" onclick="switchTab('neutral')">
-                    <i class="fas fa-meh"></i> Neutral
-                    <span class="tab-count">{{ sd.Neutral.count }}</span>
+                <button onclick="switchMainTab('text')" id="main-tab-text" class="main-tab">
+                    <i class="fas fa-comment-dots mr-2"></i> Text Analysis
                 </button>
             </div>
 
-            <!-- Comments List -->
-            <div id="commentsContainer" class="comments-list"></div>
-
-            <!-- Pagination -->
-            <div id="commentPagination" class="pagination"></div>
-        </div>
-    </section>
-    {% endif %}
-
-    <!-- ==================== PANEL 8: FINAL SCORE ==================== -->
-    {% if yr.final_score %}
-    <section id="panelScore" class="yt-result-section visible">
-        <div class="card">
-            <h2><i class="fas fa-trophy"></i> Audience Sentiment Score</h2>
-            <div class="final-score-wrap">
-
-                <!-- SVG Circle Gauge -->
-                <div class="score-circle-wrap">
-                    <svg class="score-svg" viewBox="0 0 180 180" id="scoreGaugeSvg">
-                        <circle class="score-track" cx="90" cy="90" r="74"/>
-                        <circle class="score-fill" id="scoreFillCircle"
-                            cx="90" cy="90" r="74"
-                            stroke="{{ yr.final_score.color }}"
-                            stroke-dasharray="465"
-                            stroke-dashoffset="465"
-                        />
-                    </svg>
-                    <div class="score-text-group">
-                        <span class="score-number" id="scoreNumber" style="color: {{ yr.final_score.color }};">0</span>
-                        <span class="score-out-of">out of 100</span>
+            <!-- Video Input -->
+            <div id="hero-video" class="hero-input-wrap">
+                <h2 class="text-2xl md:text-3xl font-bold text-center mb-2">Analyze Any YouTube Video</h2>
+                <p class="text-slate-400 text-center mb-8 max-w-lg mx-auto">Paste a URL to get instant sentiment insights, charts, and audience score.</p>
+                <form id="youtubeForm" method="POST" action="/youtube-analyze" class="max-w-2xl mx-auto">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="flex gap-3 flex-wrap sm:flex-nowrap">
+                        <input type="url" name="video_url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..."
+                            class="flex-1 min-w-0 px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all"
+                            value="{{ request.form.get('video_url', '') }}" required autocomplete="off">
+                        <button type="submit" id="ytSubmitBtn" class="px-8 py-4 bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 text-white font-bold rounded-xl hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg shadow-red-500/25 whitespace-nowrap">
+                            <i class="fab fa-youtube mr-2"></i> Analyze
+                        </button>
                     </div>
+                </form>
+                <div id="youtubeLoading" class="loading hidden mt-6 justify-center">
+                    <div class="spinner"></div>
+                    <p class="text-slate-400 text-sm ml-3">Fetching &amp; analyzing comments — this may take 10–20 seconds…</p>
                 </div>
+                {% if youtube_error %}
+                <div class="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-sm">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <strong>Error:</strong> {{ youtube_error }}
+                </div>
+                {% endif %}
+            </div>
 
-                <!-- Score details -->
-                <div class="score-details">
-                    <div class="score-label" style="color: {{ yr.final_score.color }};">
-                        {{ yr.final_score.label }}
+            <!-- Text Input -->
+            <div id="hero-text" class="hero-input-wrap hidden">
+                <h2 class="text-2xl md:text-3xl font-bold text-center mb-2">Single Text Analysis</h2>
+                <p class="text-slate-400 text-center mb-8 max-w-lg mx-auto">Enter a comment or text to analyze its sentiment directly.</p>
+                <form id="predictionForm" method="POST" action="/predict" class="max-w-2xl mx-auto">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="relative mb-4">
+                        <textarea name="text" id="inputText" rows="4" placeholder="Type your text here… (e.g., 'This video is absolutely amazing!')"
+                            class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all resize-y"
+                            required></textarea>
+                        <div class="absolute bottom-3 right-3 text-xs text-slate-500"><span id="charCount">0</span> / 500</div>
                     </div>
-                    <div class="score-description">
-                        Based on <strong>{{ yr.total_comments_fetched }}</strong> analyzed comments, this video scores
-                        <strong style="color: {{ yr.final_score.color }};">{{ yr.final_score.score }}/100</strong> on audience sentiment.
-                        The score weights positive comments fully and neutral comments at 50%.
+                    <div class="flex gap-3 justify-center">
+                        <button type="submit" class="px-8 py-3 bg-gradient-to-r from-brand to-brand2 text-white font-bold rounded-xl hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg shadow-brand/25">
+                            <i class="fas fa-magic mr-2"></i> Analyze Sentiment
+                        </button>
+                        <button type="button" onclick="clearForm()" class="px-6 py-3 bg-white/5 border border-white/10 text-slate-300 font-semibold rounded-xl hover:bg-white/10 transition-all">
+                            <i class="fas fa-trash mr-2"></i> Clear
+                        </button>
                     </div>
-                    <div class="score-breakdown">
-                        <div class="score-bar-row">
-                            <span class="score-bar-label">Positive</span>
-                            <div class="score-bar-track">
-                                <div class="score-bar-fill" style="width: {{ sd.Positive.percentage }}%; background: #22c55e;"></div>
-                            </div>
-                            <span class="score-bar-pct">{{ sd.Positive.percentage }}%</span>
-                        </div>
-                        <div class="score-bar-row">
-                            <span class="score-bar-label">Neutral</span>
-                            <div class="score-bar-track">
-                                <div class="score-bar-fill" style="width: {{ sd.Neutral.percentage }}%; background: #f59e0b;"></div>
-                            </div>
-                            <span class="score-bar-pct">{{ sd.Neutral.percentage }}%</span>
-                        </div>
-                        <div class="score-bar-row">
-                            <span class="score-bar-label">Negative</span>
-                            <div class="score-bar-track">
-                                <div class="score-bar-fill" style="width: {{ sd.Negative.percentage }}%; background: #ef4444;"></div>
-                            </div>
-                            <span class="score-bar-pct">{{ sd.Negative.percentage }}%</span>
-                        </div>
-                    </div>
+                </form>
+                <div id="loading" class="loading hidden mt-6 justify-center">
+                    <div class="spinner"></div>
+                    <p class="text-slate-400 text-sm ml-3">Analyzing sentiment…</p>
                 </div>
             </div>
-        </div>
-    </section>
-    {% endif %}
+        </section>
 
-    {% endif %}{# end youtube_result #}
-
-    <hr class="divider">
-
-    <!-- ==================== TEXT PREDICTION SECTION ==================== -->
-    <div style="display:flex;align-items:center;gap:12px;margin:32px 0 16px;">
-        <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(99,102,241,.5),transparent);"></div>
-        <span style="padding:5px 16px;border-radius:999px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);color:#818cf8;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;"><i class="fas fa-comment-dots"></i> Step 2 &middot; General Sentiment Analysis</span>
-        <div style="flex:1;height:1px;background:linear-gradient(270deg,rgba(99,102,241,.5),transparent);"></div>
-    </div>
-    <section id="textPredictSection">
-        <div class="card">
-            <h2><i class="fas fa-comment-dots"></i> Single Text Analysis</h2>
-            <p class="description">Enter a comment or text to analyze its sentiment directly.</p>
-
-            <form id="predictionForm" method="POST" action="/predict">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="textarea-wrapper">
-                    <textarea
-                        name="text"
-                        id="inputText"
-                        placeholder="Type your text here… (e.g., 'This video is absolutely amazing!')"
-                        rows="4"
-                        required
-                    ></textarea>
-                    <div class="char-count"><span id="charCount">0</span> / 500</div>
+        <!-- ==================== VIDEO RESULTS ==================== -->
+        <div id="content-video" class="tab-content">
+            {% if not youtube_result %}
+            <!-- Empty State -->
+            <div class="glass-card p-12 text-center animate-fade-in">
+                <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-brand/10 flex items-center justify-center">
+                    <i class="fas fa-chart-pie text-3xl text-brand"></i>
                 </div>
-                <div class="button-group">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-magic"></i> Analyze Sentiment
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="clearForm()">
-                        <i class="fas fa-trash"></i> Clear
-                    </button>
-                </div>
-            </form>
-
-            <div id="loading" class="loading hidden">
-                <div class="spinner"></div>
-                <p>Analyzing sentiment…</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- Text Result -->
-    <section id="resultSection" class="result-section {% if not result %}hidden{% endif %}">
-        <div class="card result-card sentiment-{{ result.sentiment|lower if result else 'neutral' }}">
-            <h2><i class="fas fa-chart-pie"></i> Analysis Result</h2>
-            <div class="result-content">
-                <div class="sentiment-badge">
-                    <i class="fas fa-{{ result.icon if result else 'circle' }}"></i>
-                    <span class="sentiment-label">{{ result.sentiment if result else 'Unknown' }}</span>
-                </div>
-
-                <div class="confidence-bar">
-                    <div class="confidence-label">
-                        <span>Confidence</span>
-                        <span class="confidence-value">{{ "%.2f"|format(result.confidence * 100) if result else '0' }}%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: {{ (result.confidence * 100) if result else '0' }}%"></div>
-                    </div>
-                </div>
-
-                <div class="details">
-                    <div class="detail-item">
-                        <span class="detail-label">Original Text</span>
-                        <p class="detail-text">{{ result.text if result else '' }}</p>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Processed Text</span>
-                        <p class="detail-text processed">{{ result.processed_text if result else '' }}</p>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Predicted Label</span>
-                        <span class="detail-value">{{ result.predicted_label if result else '' }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== HISTORY ==================== -->
-    <section class="history-section">
-        <div class="card">
-            <h2><i class="fas fa-history"></i> Recent Predictions</h2>
-            {% if history %}
-            <div class="history-list">
-                {% for item in history %}
-                <div class="history-item sentiment-{{ item.sentiment|lower }}">
-                    <div class="history-text">{{ item.text[:80] }}{% if item.text|length > 80 %}…{% endif %}</div>
-                    <div class="history-meta">
-                        <span class="history-badge">{{ item.sentiment }}</span>
-                        <span class="history-confidence">{{ "%.0f"|format(item.confidence * 100) }}%</span>
-                    </div>
-                </div>
-                {% endfor %}
+                <h3 class="text-xl font-bold mb-2">No Analysis Yet</h3>
+                <p class="text-slate-400 max-w-md mx-auto">Enter a YouTube URL above to see sentiment breakdown, charts, and insights.</p>
             </div>
             {% else %}
-            <p class="empty-state">No predictions yet. Analyze a YouTube video or enter text above!</p>
+            {% set yr = youtube_result %}
+            {% set sd = yr.sentiment_distribution %}
+            <div class="space-y-6">
+                <!-- Video Info Card -->
+                <section class="glass-card p-6 animate-slide-up">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-film text-brand2"></i> Video Information
+                    </h2>
+                    <div class="flex gap-5 flex-wrap mb-5">
+                        <img src="https://img.youtube.com/vi/{{ yr.video_id }}/mqdefault.jpg" alt="Video thumbnail"
+                            class="w-56 h-32 object-cover rounded-xl border border-white/10 flex-shrink-0"
+                            onerror="this.style.display='none'">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-lg font-bold text-white mb-2 line-clamp-2" title="{{ yr.video_title }}">{{ yr.video_title }}</div>
+                            <div class="text-sm text-slate-400 flex items-center gap-2 mb-2">
+                                <i class="fas fa-user-circle text-brand3"></i> {{ yr.channel }}
+                                {% if yr.published_at %}
+                                <span class="text-slate-600">&bull;</span>
+                                <i class="fas fa-calendar-alt text-slate-500"></i> {{ yr.published_at[:10] }}
+                                {% endif %}
+                            </div>
+                            <div class="text-xs text-slate-500">
+                                <i class="fas fa-comments mr-1"></i> {{ yr.total_comments_fetched }} comments analyzed out of {{ "{:,}".format(yr.comment_count) }} total
+                            </div>
+                        </div>
+                    </div>
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="kpi-card">
+                            <i class="fas fa-eye text-brand text-xl mb-2 block"></i>
+                            <span class="text-2xl font-extrabold text-white">{{ "{:,}".format(yr.view_count) }}</span>
+                            <span class="text-xs text-slate-500 uppercase tracking-wider mt-1 block">Views</span>
+                        </div>
+                        <div class="kpi-card">
+                            <i class="fas fa-thumbs-up text-pink-500 text-xl mb-2 block"></i>
+                            <span class="text-2xl font-extrabold text-white">{{ "{:,}".format(yr.like_count) }}</span>
+                            <span class="text-xs text-slate-500 uppercase tracking-wider mt-1 block">Likes</span>
+                        </div>
+                        <div class="kpi-card">
+                            <i class="fas fa-comments text-pos text-xl mb-2 block"></i>
+                            <span class="text-2xl font-extrabold text-white">{{ "{:,}".format(yr.comment_count) }}</span>
+                            <span class="text-xs text-slate-500 uppercase tracking-wider mt-1 block">Comments</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Sentiment Distribution -->
+                <section class="glass-card p-6 animate-slide-up" style="animation-delay: 0.1s;">
+                    <h2 class="text-lg font-bold mb-6 flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-brand2"></i> Sentiment Distribution
+                    </h2>
+                    <div class="grid md:grid-cols-[260px_1fr] gap-8 items-start">
+                        <!-- Donut Chart -->
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="relative w-52 h-52">
+                                <canvas id="donutChart"></canvas>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span class="text-3xl font-black text-white">{{ sd.Positive.percentage }}%</span>
+                                    <span class="text-xs text-slate-500 uppercase tracking-wider">Positive</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 flex-wrap justify-center">
+                                <div class="flex items-center gap-2 text-sm text-slate-400">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-pos"></span> Positive
+                                </div>
+                                <div class="flex items-center gap-2 text-sm text-slate-400">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-neg"></span> Negative
+                                </div>
+                                <div class="flex items-center gap-2 text-sm text-slate-400">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-neu"></span> Neutral
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Stat Cards -->
+                        <div class="flex flex-col gap-3">
+                            <div class="sentiment-row positive">
+                                <div class="w-10 h-10 rounded-lg bg-pos/15 flex items-center justify-center text-pos flex-shrink-0">
+                                    <i class="fas fa-smile"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs text-slate-500 uppercase tracking-wider">Positive</div>
+                                    <div class="text-2xl font-extrabold text-white">{{ sd.Positive.count }}</div>
+                                    <div class="text-xs text-slate-500">Avg confidence: {{ "%.0f"|format(sd.Positive.avg_confidence * 100) }}%</div>
+                                </div>
+                                <span class="text-xl font-bold text-pos">{{ sd.Positive.percentage }}%</span>
+                            </div>
+                            <div class="sentiment-row negative">
+                                <div class="w-10 h-10 rounded-lg bg-neg/15 flex items-center justify-center text-neg flex-shrink-0">
+                                    <i class="fas fa-frown"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs text-slate-500 uppercase tracking-wider">Negative</div>
+                                    <div class="text-2xl font-extrabold text-white">{{ sd.Negative.count }}</div>
+                                    <div class="text-xs text-slate-500">Avg confidence: {{ "%.0f"|format(sd.Negative.avg_confidence * 100) }}%</div>
+                                </div>
+                                <span class="text-xl font-bold text-neg">{{ sd.Negative.percentage }}%</span>
+                            </div>
+                            <div class="sentiment-row neutral">
+                                <div class="w-10 h-10 rounded-lg bg-neu/15 flex items-center justify-center text-neu flex-shrink-0">
+                                    <i class="fas fa-meh"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-xs text-slate-500 uppercase tracking-wider">Neutral</div>
+                                    <div class="text-2xl font-extrabold text-white">{{ sd.Neutral.count }}</div>
+                                    <div class="text-xs text-slate-500">Avg confidence: {{ "%.0f"|format(sd.Neutral.avg_confidence * 100) }}%</div>
+                                </div>
+                                <span class="text-xl font-bold text-neu">{{ sd.Neutral.percentage }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Trend Chart -->
+                {% if yr.trend_data and yr.trend_data.labels|length > 1 %}
+                <section class="glass-card p-6 animate-slide-up" style="animation-delay: 0.15s;">
+                    <h2 class="text-lg font-bold mb-2 flex items-center gap-2">
+                        <i class="fas fa-chart-line text-brand2"></i> Sentiment Trend
+                    </h2>
+                    <p class="text-sm text-slate-400 mb-4">How sentiment evolves across comment segments.</p>
+                    <div class="h-72 relative">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- Insights -->
+                {% if yr.insights %}
+                <section class="glass-card p-6 animate-slide-up" style="animation-delay: 0.2s;">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-lightbulb text-brand2"></i> AI Insights
+                    </h2>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {% for insight in yr.insights %}
+                        <div class="insight-card">
+                            <div class="w-9 h-9 rounded-lg bg-brand2/15 flex items-center justify-center text-brand2 flex-shrink-0">
+                                <i class="fas {{ insight.icon }} text-sm"></i>
+                            </div>
+                            <p class="text-sm text-slate-300 leading-relaxed">{{ insight.text }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- Keywords -->
+                {% if yr.keywords %}
+                <section class="glass-card p-6 animate-slide-up" style="animation-delay: 0.25s;">
+                    <h2 class="text-lg font-bold mb-2 flex items-center gap-2">
+                        <i class="fas fa-tags text-brand2"></i> Keywords &amp; Topics
+                    </h2>
+                    <p class="text-sm text-slate-400 mb-4">Top words extracted from all analyzed comments.</p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for kw in yr.keywords %}
+                        <span class="keyword-pill kw-size-{{ kw.size }}" title="{{ kw.count }} occurrences">
+                            {{ kw.word }}
+                            <span class="text-xs text-slate-500 ml-1">{{ kw.count }}</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endif %}
+
+                <!-- Comments -->
+                {% if yr.comments %}
+                <section class="glass-card p-6 animate-slide-up" style="animation-delay: 0.3s;" id="panelComments">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-comments text-brand2"></i> Comments
+                    </h2>
+                    <div class="flex gap-2 flex-wrap mb-4">
+                        <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">
+                            <i class="fas fa-list mr-1"></i> All <span class="tab-count">{{ yr.comments|length }}</span>
+                        </button>
+                        <button class="tab-btn" id="tab-positive" onclick="switchTab('positive')">
+                            <i class="fas fa-smile mr-1"></i> Positive <span class="tab-count">{{ sd.Positive.count }}</span>
+                        </button>
+                        <button class="tab-btn" id="tab-negative" onclick="switchTab('negative')">
+                            <i class="fas fa-frown mr-1"></i> Negative <span class="tab-count">{{ sd.Negative.count }}</span>
+                        </button>
+                        <button class="tab-btn" id="tab-neutral" onclick="switchTab('neutral')">
+                            <i class="fas fa-meh mr-1"></i> Neutral <span class="tab-count">{{ sd.Neutral.count }}</span>
+                        </button>
+                    </div>
+                    <div id="commentsContainer" class="flex flex-col gap-2.5"></div>
+                    <div id="commentPagination" class="flex gap-2 flex-wrap mt-5"></div>
+                </section>
+                {% endif %}
+
+                <!-- Final Score -->
+                {% if yr.final_score %}
+                <section class="glass-card p-6 animate-slide-up" style="animation-delay: 0.35s;">
+                    <h2 class="text-lg font-bold mb-6 flex items-center gap-2">
+                        <i class="fas fa-trophy text-brand2"></i> Audience Sentiment Score
+                    </h2>
+                    <div class="flex gap-8 items-center flex-wrap justify-center md:justify-start">
+                        <!-- Gauge -->
+                        <div class="relative w-44 h-44 flex-shrink-0">
+                            <svg class="w-full h-full -rotate-90" viewBox="0 0 180 180">
+                                <circle cx="90" cy="90" r="74" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12"/>
+                                <circle id="scoreFillCircle" cx="90" cy="90" r="74" fill="none" stroke="{{ yr.final_score.color }}"
+                                    stroke-width="12" stroke-linecap="round" stroke-dasharray="465" stroke-dashoffset="465"/>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="scoreNumber" class="text-4xl font-black" style="color: {{ yr.final_score.color }};">0</span>
+                                <span class="text-xs text-slate-500">out of 100</span>
+                            </div>
+                        </div>
+                        <!-- Details -->
+                        <div class="flex-1 min-w-0 max-w-md">
+                            <div class="text-2xl font-extrabold mb-2" style="color: {{ yr.final_score.color }};">{{ yr.final_score.label }}</div>
+                            <p class="text-sm text-slate-400 mb-5 leading-relaxed">
+                                Based on <strong class="text-white">{{ yr.total_comments_fetched }}</strong> analyzed comments, this video scores
+                                <strong style="color: {{ yr.final_score.color }};">{{ yr.final_score.score }}/100</strong> on audience sentiment.
+                            </p>
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-slate-500 w-12">Positive</span>
+                                    <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-pos transition-all duration-1000" style="width: {{ sd.Positive.percentage }}%"></div>
+                                    </div>
+                                    <span class="text-xs text-slate-400 w-8 text-right">{{ sd.Positive.percentage }}%</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-slate-500 w-12">Neutral</span>
+                                    <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-neu transition-all duration-1000" style="width: {{ sd.Neutral.percentage }}%"></div>
+                                    </div>
+                                    <span class="text-xs text-slate-400 w-8 text-right">{{ sd.Neutral.percentage }}%</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-slate-500 w-12">Negative</span>
+                                    <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-neg transition-all duration-1000" style="width: {{ sd.Negative.percentage }}%"></div>
+                                    </div>
+                                    <span class="text-xs text-slate-400 w-8 text-right">{{ sd.Negative.percentage }}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+            </div>
             {% endif %}
         </div>
-    </section>
 
-    <!-- ==================== MODEL INFO ==================== -->
-    <section class="info-section">
-        <div class="card info-card">
-            <h2><i class="fas fa-info-circle"></i> Model Information</h2>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">Model</span>
-                    <span class="info-value">{{ model_info.name }}</span>
+        <!-- ==================== TEXT ANALYSIS RESULTS ==================== -->
+        <div id="content-text" class="tab-content hidden">
+            <!-- Text Result -->
+            <section id="resultSection" class="{% if not result %}hidden{% endif %} mb-6 animate-slide-up">
+                <div class="glass-card p-6 border-l-4 {% if result %}{% if result.sentiment == 'Positive' %}border-l-pos{% elif result.sentiment == 'Negative' %}border-l-neg{% else %}border-l-neu{% endif %}{% else %}border-l-brand{% endif %}">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-brand2"></i> Analysis Result
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-xl {% if result %}{% if result.sentiment == 'Positive' %}bg-pos/10 text-pos{% elif result.sentiment == 'Negative' %}bg-neg/10 text-neg{% else %}bg-neu/10 text-neu{% endif %}{% endif %}">
+                            <i class="fas fa-{{ result.icon if result else 'circle' }}"></i>
+                            <span class="font-bold text-lg">{{ result.sentiment if result else 'Unknown' }}</span>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm text-slate-400 mb-2">
+                                <span>Confidence</span>
+                                <span class="font-bold text-white">{{ "%.2f"|format(result.confidence * 100) if result else '0' }}%</span>
+                            </div>
+                            <div class="h-2.5 bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full bg-gradient-to-r from-brand to-brand2 transition-all duration-1000" style="width: {{ (result.confidence * 100) if result else '0' }}%"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Original Text</span>
+                                <p class="text-sm text-slate-300 bg-white/5 p-3 rounded-lg">{{ result.text if result else '' }}</p>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Processed Text</span>
+                                <p class="text-sm text-slate-400 bg-white/5 p-3 rounded-lg font-mono text-xs">{{ result.processed_text if result else '' }}</p>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Predicted Label</span>
+                                <span class="text-sm font-bold text-brand3">{{ result.predicted_label if result else '' }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Accuracy</span>
-                    <span class="info-value">{{ "%.2f"|format(model_info.accuracy * 100) }}%</span>
+            </section>
+
+            <!-- History -->
+            <section class="glass-card p-6 animate-slide-up">
+                <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-history text-brand2"></i> Recent Predictions
+                </h2>
+                {% if history %}
+                <div class="flex flex-col gap-2.5">
+                    {% for item in history %}
+                    <div class="history-item sentiment-{{ item.sentiment|lower }}">
+                        <div class="text-sm text-slate-300 flex-1 min-w-0 truncate">{{ item.text[:80] }}{% if item.text|length > 80 %}…{% endif %}</div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold {% if item.sentiment == 'Positive' %}bg-pos/15 text-pos{% elif item.sentiment == 'Negative' %}bg-neg/15 text-neg{% else %}bg-neu/15 text-neu{% endif %}">{{ item.sentiment }}</span>
+                            <span class="text-xs text-slate-500">{{ "%.0f"|format(item.confidence * 100) }}%</span>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
-                <div class="info-item">
-                    <span class="info-label">F1-Score</span>
-                    <span class="info-value">{{ "%.2f"|format(model_info.f1 * 100) }}%</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Features</span>
-                    <span class="info-value">{{ model_info.features }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Classes</span>
-                    <span class="info-value">Negative / Neutral / Positive</span>
+                {% else %}
+                <p class="text-slate-500 text-center py-5">No predictions yet. Analyze text above!</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- ==================== MODEL INFO (Collapsible) ==================== -->
+        <section class="mt-8">
+            <button onclick="toggleModelInfo()" class="w-full glass-card p-4 flex items-center justify-between hover:bg-white/[0.06] transition-all">
+                <span class="font-bold flex items-center gap-2">
+                    <i class="fas fa-info-circle text-brand2"></i> Model Information
+                </span>
+                <i class="fas fa-chevron-down text-slate-500 transition-transform" id="modelInfoIcon"></i>
+            </button>
+            <div id="modelInfoContent" class="hidden">
+                <div class="glass-card p-6 mt-2 border-t-0 rounded-t-none">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                            <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Model</div>
+                            <div class="text-lg font-bold text-brand3">{{ model_info.name }}</div>
+                        </div>
+                        <div class="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                            <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Accuracy</div>
+                            <div class="text-lg font-bold text-brand3">{{ "%.2f"|format(model_info.accuracy * 100) }}%</div>
+                        </div>
+                        <div class="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                            <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">F1-Score</div>
+                            <div class="text-lg font-bold text-brand3">{{ "%.2f"|format(model_info.f1 * 100) }}%</div>
+                        </div>
+                        <div class="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                            <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Features</div>
+                            <div class="text-lg font-bold text-brand3">{{ model_info.features }}</div>
+                        </div>
+                        <div class="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                            <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Classes</div>
+                            <div class="text-lg font-bold text-brand3">3</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <p>Built with <i class="fas fa-heart"></i> using Flask, scikit-learn &amp; MLflow</p>
-    </footer>
+        <!-- ==================== FOOTER ==================== -->
+        <footer class="text-center pt-10 pb-4 text-slate-600 text-sm">
+            <p>Built with <i class="fas fa-heart text-pink-500"></i> using Flask, scikit-learn &amp; MLflow</p>
+        </footer>
 
-</div><!-- /container -->
+    </div>
 
-<!-- ==================== CHART.JS CDN ==================== -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- ==================== CHART.JS CDN ==================== -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
-<!-- ==================== INLINE DATA FROM FLASK ==================== -->
-{% if youtube_result %}
-<script>
-// --- Data injected by Flask ---
-const YT_DATA = {
-    donut: {
-        positive: {{ youtube_result.sentiment_distribution.Positive.percentage }},
-        negative: {{ youtube_result.sentiment_distribution.Negative.percentage }},
-        neutral:  {{ youtube_result.sentiment_distribution.Neutral.percentage }}
-    },
-    trend: {{ youtube_result.trend_data | tojson }},
-    comments: {{ youtube_result.comments | tojson }},
-    score: {
-        value: {{ youtube_result.final_score.score }},
-        color: "{{ youtube_result.final_score.color }}"
-    }
-};
-</script>
-{% endif %}
+    <!-- ==================== INLINE DATA FROM FLASK ==================== -->
+    {% if youtube_result %}
+    <script>
+    const YT_DATA = {
+        donut: {
+            positive: {{ youtube_result.sentiment_distribution.Positive.percentage }},
+            negative: {{ youtube_result.sentiment_distribution.Negative.percentage }},
+            neutral:  {{ youtube_result.sentiment_distribution.Neutral.percentage }}
+        },
+        trend: {{ youtube_result.trend_data | tojson }},
+        comments: {{ youtube_result.comments | tojson }},
+        score: {
+            value: {{ youtube_result.final_score.score }},
+            color: "{{ youtube_result.final_score.color }}"
+        }
+    };
+    </script>
+    {% endif %}
 
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
