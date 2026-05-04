@@ -1,7 +1,7 @@
 # Data files (tracked by DVC)
-data/
-models/
-reports/
+/data/
+/models/
+/reports/
 
 # MLflow
 mlruns/
