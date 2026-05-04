@@ -20,7 +20,7 @@ coverage.xml
 .DS_Store
 Thumbs.db
 *.mo
-data/
+data/raw/
 notebook/
 reports/
 mlruns/
