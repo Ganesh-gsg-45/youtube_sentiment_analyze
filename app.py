@@ -41,6 +41,10 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
 # Security: disable debug mode in production
 app.config['DEBUG'] = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
+# Allow session cookies to work inside Hugging Face Spaces iframe (fixes CSRF token missing)
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True
+
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
 
