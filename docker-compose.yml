@@ -1,0 +1,62 @@
+services:
+  # ── Main Flask Application ────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: sentimentscope_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5000
+      - FLASK_DEBUG=False
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
+    env_file:
+      - .env
+    volumes:
+      # Persist trained models between container restarts
+      - ./models:/app/models
+      # Persist MLflow runs
+      - ./mlruns:/app/mlruns
+      # Persist data
+      - ./data:/app/data
+      # Persist reports
+      - ./reports:/app/reports
+    depends_on:
+      - mlflow
+    networks:
+      - sentiment_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── MLflow Tracking Server ────────────────────────────────
+  mlflow:
+    image: python:3.11-slim
+    container_name: sentimentscope_mlflow
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./mlruns:/mlflow/mlruns
+    command: >
+      sh -c "pip install mlflow --quiet &&
+             mlflow server
+               --host 0.0.0.0
+               --port 5001
+               --backend-store-uri sqlite:////mlflow/mlflow.db
+               --default-artifact-root /mlflow/mlruns"
+    networks:
+      - sentiment_net
+
+networks:
+  sentiment_net:
+    driver: bridge

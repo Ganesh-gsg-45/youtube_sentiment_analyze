@@ -27,3 +27,4 @@ youtube_data:
   max_comments_per_video: 1000
   max_videos: 5
   api_key_env: "YOUTUBE_API_KEY"
+

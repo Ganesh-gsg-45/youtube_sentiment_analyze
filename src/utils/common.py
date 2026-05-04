@@ -39,17 +39,6 @@ def save_bin(data: Any, path: Path):
 
 
 def _validate_file_path(path: Path, max_size_mb: int = 500) -> None:
-    """
-    Validate file path for security before loading.
-    
-    Args:
-        path: Path to file.
-        max_size_mb: Maximum allowed file size in MB.
-        
-    Raises:
-        ValueError: If path validation fails.
-        FileNotFoundError: If file does not exist.
-    """
     # Resolve to absolute path
     resolved_path = path.resolve()
     
@@ -88,7 +77,7 @@ def get_project_root() -> Path:
 
 
 def get_env_var(key: str, default: str = None) -> str:
-    """Reads an environment variable, returning default if not found."""
+    
     value = os.getenv(key, default)
     if value is None:
         logging.warning(f"Environment variable '{key}' not found.")
