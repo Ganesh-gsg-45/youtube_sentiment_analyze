@@ -44,6 +44,11 @@ app.config['DEBUG'] = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true',
 # Allow session cookies to work inside Hugging Face Spaces iframe (fixes CSRF token missing)
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = True
+app.config['WTF_CSRF_SSL_STRICT'] = False  # Disable strict referer checking for cross-origin iframes
+
+# Fix for running behind Hugging Face reverse proxy
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
