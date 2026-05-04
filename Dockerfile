@@ -1,12 +1,12 @@
 FROM python:3.10-slim
 
 # Install system dependencies
-RUN apt-get update &amp;&amp; apt-get install -y \
+RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
     g++ \
     curl \
-    &amp;&amp; rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -16,8 +16,8 @@ COPY requirements.txt .
 COPY setup.py .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip &amp;&amp; \
-    pip install --no-cache-dir -r requirements.txt &amp;&amp; \
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir -e .
 
 # Download NLTK data
@@ -26,7 +26,7 @@ RUN python -c "import nltk; nltk.download('stopwords', quiet=True); nltk.downloa
 # Create necessary directories
 RUN mkdir -p models data/processed data/raw reports mlruns static/css static/js templates static/css templates/js
 
-# Copy application code &amp; assets
+# Copy application code & assets
 COPY app.py .
 COPY src/ ./src/
 COPY static/ ./static/
@@ -36,7 +36,7 @@ COPY models/ ./models/
 COPY data/processed/ ./data/processed/
 
 # Create non-root user
-RUN groupadd -r appuser &amp;&amp; useradd -r -g appuser appuser
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 RUN chown -R appuser:appuser /app
 USER appuser
 
