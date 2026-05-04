@@ -1,3 +1,13 @@
+---
+title: SentimentScope
+emoji: 📊
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # SentimentScope — YouTube Comment Sentiment Analysis
 
 A Flask web app that analyzes YouTube video comments using a trained ML model (LinearSVM) to classify sentiment as **Positive**, **Negative**, or **Neutral**.
