@@ -14,6 +14,7 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 COPY setup.py .
+COPY src/ ./src/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -28,7 +29,6 @@ RUN mkdir -p models data/processed data/raw reports mlruns static/css static/js 
 
 # Copy application code & assets
 COPY app.py .
-COPY src/ ./src/
 COPY static/ ./static/
 COPY templates/ ./templates/
 COPY params.yaml .
