@@ -1,16 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>SentimentScope — YouTube Sentiment Analysis Platform</title>
     <meta name="description" content="Analyze YouTube video comment sentiment with AI-powered natural language processing. Get pie charts, trend analysis, keyword clouds, and audience scores.">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -28,8 +33,22 @@
             }
         }
     </script>
+    <!-- Firebase Auth Protection -->
+    <script type="module">
+        import { auth } from "{{ url_for('static', filename='js/firebase.js') }}";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+        
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = "/login";
+            } else {
+                document.body.classList.remove('opacity-0');
+            }
+        });
+    </script>
+    <style>body { transition: opacity 0.3s; }</style>
 </head>
-<body class="bg-bg text-white min-h-screen font-['Inter'] antialiased">
+<body class="bg-slate-50 dark:bg-bg text-slate-900 dark:text-white min-h-screen font-['Inter'] antialiased opacity-0 transition-colors duration-300">
 
     <!-- Background orbs -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -40,7 +59,17 @@
     <div class="relative z-10 max-w-6xl mx-auto px-4 pb-20">
 
         <!-- ==================== HEADER ==================== -->
-        <header class="pt-12 pb-8 text-center">
+        <header class="pt-12 pb-8 text-center relative">
+            <div class="absolute top-8 right-0 flex items-center gap-3">
+                <button id="themeToggleBtn" title="Toggle theme"
+                    style="background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 10px; padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; color: white; box-shadow: 0 0 12px rgba(99,102,241,0.4); transition: all 0.3s;">
+                    <span id="themeIcon">🌙</span>
+                    <span id="themeLabel">Dark</span>
+                </button>
+                <button id="logoutBtn" class="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-semibold text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </button>
+            </div>
             <div class="flex items-center justify-center gap-3 mb-4 animate-fade-in">
                 <i class="fab fa-youtube text-3xl bg-gradient-to-br from-red-500 to-pink-500 bg-clip-text text-transparent"></i>
                 <h1 class="text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -71,7 +100,7 @@
                 <form id="youtubeForm" method="POST" action="/youtube-analyze" class="max-w-2xl mx-auto">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="flex gap-3 flex-wrap sm:flex-nowrap">
-                        <input type="url" name="video_url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..."
+                        <input type="url" name="video_url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." 
                             class="flex-1 min-w-0 px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all"
                             value="{{ request.form.get('video_url', '') }}" required autocomplete="off">
                         <button type="submit" id="ytSubmitBtn" class="px-8 py-4 bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 text-white font-bold rounded-xl hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg shadow-red-500/25 whitespace-nowrap">
@@ -189,7 +218,7 @@
                                 <canvas id="donutChart"></canvas>
                                 <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                     <span class="text-3xl font-black text-white">{{ sd.Positive.percentage }}%</span>
-                                    <span class="text-xs text-slate-500 uppercase tracking-wider">Positive</span>
+                                    <span class="text-xs text-slate-500 uppercase">Positive</span>
                                 </div>
                             </div>
                             <div class="flex gap-4 flex-wrap justify-center">
@@ -293,31 +322,6 @@
                 </section>
                 {% endif %}
 
-                <!-- Comments -->
-                {% if yr.comments %}
-                <section class="glass-card p-6 animate-slide-up" style="animation-delay: 0.3s;" id="panelComments">
-                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-                        <i class="fas fa-comments text-brand2"></i> Comments
-                    </h2>
-                    <div class="flex gap-2 flex-wrap mb-4">
-                        <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">
-                            <i class="fas fa-list mr-1"></i> All <span class="tab-count">{{ yr.comments|length }}</span>
-                        </button>
-                        <button class="tab-btn" id="tab-positive" onclick="switchTab('positive')">
-                            <i class="fas fa-smile mr-1"></i> Positive <span class="tab-count">{{ sd.Positive.count }}</span>
-                        </button>
-                        <button class="tab-btn" id="tab-negative" onclick="switchTab('negative')">
-                            <i class="fas fa-frown mr-1"></i> Negative <span class="tab-count">{{ sd.Negative.count }}</span>
-                        </button>
-                        <button class="tab-btn" id="tab-neutral" onclick="switchTab('neutral')">
-                            <i class="fas fa-meh mr-1"></i> Neutral <span class="tab-count">{{ sd.Neutral.count }}</span>
-                        </button>
-                    </div>
-                    <div id="commentsContainer" class="flex flex-col gap-2.5"></div>
-                    <div id="commentPagination" class="flex gap-2 flex-wrap mt-5"></div>
-                </section>
-                {% endif %}
-
                 <!-- Final Score -->
                 {% if yr.final_score %}
                 <section class="glass-card p-6 animate-slide-up" style="animation-delay: 0.35s;">
@@ -379,7 +383,7 @@
         <div id="content-text" class="tab-content hidden">
             <!-- Text Result -->
             <section id="resultSection" class="{% if not result %}hidden{% endif %} mb-6 animate-slide-up">
-                <div class="glass-card p-6 border-l-4 {% if result %}{% if result.sentiment == 'Positive' %}border-l-pos{% elif result.sentiment == 'Negative' %}border-l-neg{% else %}border-l-neu{% endif %}{% else %}border-l-brand{% endif %}">
+                <div class="glass-card p-6 border-l-4 {% if result %}{% if result.sentiment == 'Positive' %}border-l-pos{% elif result.sentiment == 'Negative' %}border-l-neg{% else %}border-l-neu{% endif %}{% endif %}">
                     <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
                         <i class="fas fa-chart-pie text-brand2"></i> Analysis Result
                     </h2>
@@ -391,10 +395,10 @@
                         <div>
                             <div class="flex justify-between text-sm text-slate-400 mb-2">
                                 <span>Confidence</span>
-                                <span class="font-bold text-white">{{ "%.2f"|format(result.confidence * 100) if result else '0' }}%</span>
+                                <span class="font-bold text-white">{{ "%.2f"|format((result.confidence * 100) if result else 0) }}%</span>
                             </div>
                             <div class="h-2.5 bg-white/5 rounded-full overflow-hidden">
-                                <div class="h-full rounded-full bg-gradient-to-r from-brand to-brand2 transition-all duration-1000" style="width: {{ (result.confidence * 100) if result else '0' }}%"></div>
+                                <div class="h-full rounded-full bg-gradient-to-r from-brand to-brand2 transition-all duration-1000" style="width: {{ (result.confidence * 100) if result else 0 }}%"></div>
                             </div>
                         </div>
                         <div class="space-y-3">
@@ -504,5 +508,41 @@
     {% endif %}
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script type="module">
+        import { logoutUser } from "{{ url_for('static', filename='js/auth.js') }}";
+        document.getElementById('logoutBtn').addEventListener('click', logoutUser);
+
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeLabel = document.getElementById('themeLabel');
+        const htmlElement = document.documentElement;
+
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                htmlElement.classList.remove('dark');
+                themeIcon.innerHTML = '☀️';
+                themeLabel.textContent = 'Light';
+                document.body.style.background = '#f1f5f9';
+                document.body.style.color = '#1e293b';
+            } else {
+                htmlElement.classList.add('dark');
+                themeIcon.innerHTML = '🌙';
+                themeLabel.textContent = 'Dark';
+                document.body.style.background = '#07071a';
+                document.body.style.color = '#f1f5f9';
+            }
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        applyTheme(savedTheme);
+
+        themeToggleBtn.addEventListener('click', () => {
+            const isDark = htmlElement.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        });
+    </script>
 </body>
 </html>
+

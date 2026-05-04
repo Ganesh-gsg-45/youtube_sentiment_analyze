@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import json
 import re
@@ -15,7 +15,6 @@ from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 
 
-
 # Add project root to Python path
 project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
@@ -24,7 +23,6 @@ from src.pipeline.prediction_pipeline import PredictionPipeline
 from src.utils.common import read_yaml
 from src.data.youtube_data_extractor import YouTubeDataExtractor
 from googleapiclient.errors import HttpError
-
 
 
 # Setup logging
@@ -53,7 +51,6 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://"
 )
-
 
 
 # Initialize prediction pipeline
@@ -104,8 +101,7 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://i.ytimg.com https://img.youtube.com;"
-
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://i.ytimg.com https://img.youtube.com; connect-src 'self' https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com;"
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
     return response
@@ -113,7 +109,11 @@ def add_security_headers(response):
 
 @app.after_request
 def after_request(response):
-    """Apply security headers after each request."""
+    "Apply security headers and disable HTML caching."
+    if response.content_type and 'text/html' in response.content_type:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
     return add_security_headers(response)
 
 
@@ -179,8 +179,19 @@ def index():
     )
 
 
-@app.route('/predict', methods=['POST'])
+@app.route('/login')
+def login():
+    """Render login page."""
+    return render_template('login.html')
 
+
+@app.route('/signup')
+def signup():
+    """Render signup page."""
+    return render_template('signup.html')
+
+
+@app.route('/predict', methods=['POST'])
 @limiter.limit("10 per minute")
 def predict():
 
@@ -238,7 +249,6 @@ def predict():
         logger.error(f"Prediction error: {e}")
         flash("An error occurred during prediction. Please try again.", "error")
         return redirect(url_for('index'))
-
 
 
 @app.route('/api/predict', methods=['POST'])
@@ -386,7 +396,7 @@ def generate_insights(sentiment_distribution: dict, total: int, keywords: list) 
     # Top keyword
     if keywords:
         top_word = keywords[0]['word']
-        insights.append({'icon': 'fa-key', 'text': f"Most discussed topic: \u2018{top_word}\u2019 — appears {keywords[0]['count']} times across comments."})
+        insights.append({'icon': 'fa-key', 'text': f"Most discussed topic: '{top_word}' — appears {keywords[0]['count']} times across comments."})
 
     return insights
 
@@ -548,7 +558,6 @@ def analyze_youtube_video(video_url: str, max_comments: int = 200) -> dict:
     }
 
 
-
 @app.route('/youtube-analyze', methods=['POST'])
 @limiter.limit("10 per minute")
 def youtube_analyze():
@@ -634,9 +643,6 @@ def youtube_analyze():
         )
 
 
-
-
-
 @app.route('/api/youtube-analyze', methods=['POST'])
 @limiter.limit("10 per minute")
 def api_youtube_analyze():
@@ -679,7 +685,6 @@ def ratelimit_handler(e):
 
 if __name__ == '__main__':
 
-
     # Ensure required directories exist
     os.makedirs('templates', exist_ok=True)
     os.makedirs('static/css', exist_ok=True)
@@ -688,16 +693,16 @@ if __name__ == '__main__':
     logger.info("Starting Sentiment Analysis Flask App...")
     logger.info(f"Project root: {project_root}")
     
-    # Security: Use environment variables for host/port, default to localhost only
-    host = os.environ.get('FLASK_HOST', '127.0.0.1')
-    port = int(os.environ.get('FLASK_PORT', 5000))
+    # HF Spaces port/env (override defaults)
+    host = os.environ.get('FLASK_HOST', '0.0.0.0')
+    port = int(os.environ.get('FLASK_PORT', '7860'))
     
     logger.info(f"Starting Sentiment Analysis Flask App on {host}:{port}...")
     logger.info(f"Debug mode: {app.config['DEBUG']}")
-    logger.info(f"Project root: {project_root}")
     
     app.run(
         host=host,
         port=port,
         debug=app.config['DEBUG']
     )
+

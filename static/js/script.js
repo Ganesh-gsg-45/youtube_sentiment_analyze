@@ -2,6 +2,12 @@
    SCRIPT.JS — SentimentScope Dashboard
    ============================================================ */
 
+let allComments = [];
+let filteredComments = [];
+let currentPage = 1;
+const PAGE_SIZE = 10;
+let activeTab = 'all';
+
 // ----------------------------------------------------------------
 // MAIN TAB SWITCHING (Video / Text)
 // ----------------------------------------------------------------
@@ -50,10 +56,10 @@ function toggleModelInfo() {
 // ----------------------------------------------------------------
 // TEXT PREDICTION FORM
 // ----------------------------------------------------------------
-const textarea   = document.getElementById('inputText');
-const charCount  = document.getElementById('charCount');
-const form       = document.getElementById('predictionForm');
-const loading    = document.getElementById('loading');
+const textarea = document.getElementById('inputText');
+const charCount = document.getElementById('charCount');
+const form = document.getElementById('predictionForm');
+const loading = document.getElementById('loading');
 
 if (textarea) {
     textarea.addEventListener('input', function () {
@@ -94,9 +100,9 @@ function clearForm() {
 // ----------------------------------------------------------------
 // YOUTUBE FORM — LOADING STATE
 // ----------------------------------------------------------------
-const youtubeForm    = document.getElementById('youtubeForm');
+const youtubeForm = document.getElementById('youtubeForm');
 const youtubeLoading = document.getElementById('youtubeLoading');
-const ytSubmitBtn    = document.getElementById('ytSubmitBtn');
+const ytSubmitBtn = document.getElementById('ytSubmitBtn');
 
 if (youtubeForm) {
     youtubeForm.addEventListener('submit', function () {
@@ -266,8 +272,8 @@ function renderTrendChart(trendData) {
 // SCORE GAUGE — SVG Animated Circle
 // ----------------------------------------------------------------
 function animateScoreGauge(score, color) {
-    const circle     = document.getElementById('scoreFillCircle');
-    const numEl      = document.getElementById('scoreNumber');
+    const circle = document.getElementById('scoreFillCircle');
+    const numEl = document.getElementById('scoreNumber');
     if (!circle || !numEl) return;
 
     const circumference = 2 * Math.PI * 74; // r=74
@@ -296,12 +302,6 @@ function animateScoreGauge(score, color) {
 // ----------------------------------------------------------------
 // COMMENTS — Tab Switching & Pagination
 // ----------------------------------------------------------------
-let allComments   = [];
-let filteredComments = [];
-let currentPage   = 1;
-const PAGE_SIZE   = 10;
-let activeTab     = 'all';
-
 function switchTab(tab) {
     activeTab = tab;
     currentPage = 1;
@@ -337,12 +337,12 @@ function renderComments() {
     }
 
     container.innerHTML = slice.map(c => {
-        const sent      = c.sentiment.toLowerCase();
-        const confPct   = Math.round((c.confidence || 0) * 100);
+        const sent = c.sentiment.toLowerCase();
+        const confPct = Math.round((c.confidence || 0) * 100);
         const confColor = sent === 'positive' ? '#22c55e' : sent === 'negative' ? '#ef4444' : '#f59e0b';
-        const icon      = sent === 'positive' ? 'fa-smile' : sent === 'negative' ? 'fa-frown' : 'fa-meh';
-        const textEsc   = escHtml(c.text);
-        const author    = escHtml(c.author || 'Anonymous');
+        const icon = sent === 'positive' ? 'fa-smile' : sent === 'negative' ? 'fa-frown' : 'fa-meh';
+        const textEsc = escHtml(c.text);
+        const author = escHtml(c.author || 'Anonymous');
         return `
             <div class="comment-item ${sent}">
                 <div class="flex-1 min-w-0">
@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Panel 7 — Comments
-    allComments      = YT_DATA.comments || [];
+    allComments = YT_DATA.comments || [];
     filteredComments = allComments;
     renderComments();
 
@@ -437,3 +437,4 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => panelInfo.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
     }
 });
+
