@@ -9,6 +9,10 @@ from datetime import datetime
 from collections import deque, Counter
 import math
 
+# Load .env file first so all env vars are available (important for deployed envs)
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -35,16 +39,35 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 
-# Secure secret key: load from env or generate a secure random one
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
+# ---------------------------------------------------------------
+# SECRET KEY — must be stable across all workers/restarts.
+# Set FLASK_SECRET_KEY in Hugging Face Spaces → Settings → Secrets.
+# If not set, we generate one at startup (breaks multi-worker CSRF).
+# ---------------------------------------------------------------
+_secret = os.environ.get('FLASK_SECRET_KEY', '')
+if not _secret or _secret == 'your-super-secret-key-here-change-in-production':
+    # Log a loud warning — this will break CSRF with multiple workers
+    _secret = secrets.token_hex(32)
+    logger.warning(
+        "FLASK_SECRET_KEY is not set or is using the placeholder value. "
+        "CSRF will fail with multiple Gunicorn workers. "
+        "Please set a strong FLASK_SECRET_KEY in your deployment secrets."
+    )
+app.secret_key = _secret
 
 # Security: disable debug mode in production
 app.config['DEBUG'] = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-# Allow session cookies to work inside Hugging Face Spaces iframe (fixes CSRF token missing)
+# ---------------------------------------------------------------
+# SESSION / CSRF CONFIGURATION
+# SameSite=None + Secure are required for HF Spaces iframe embedding.
+# WTF_CSRF_TIME_LIMIT=None disables token expiry (prevents spurious failures).
+# ---------------------------------------------------------------
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = True
-app.config['WTF_CSRF_SSL_STRICT'] = False  # Disable strict referer checking for cross-origin iframes
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['WTF_CSRF_SSL_STRICT'] = False   # Allow cross-origin POST (HF Spaces)
+app.config['WTF_CSRF_TIME_LIMIT'] = None    # Disable CSRF token expiry
 
 # Fix for running behind Hugging Face reverse proxy
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -193,6 +216,15 @@ def login():
     """Render login page."""
     return render_template('login.html')
 
+@app.route('/login', methods=['POST'])
+def login_post():
+    """Handle login form POST (CSRF safe fallback)."""
+    email = request.form.get('email')
+    logger.info(f"Login attempt: {email}")
+    # Firebase handles auth client-side, just log + redirect
+    flash('Login processed. Check Firebase auth.', 'info')
+    return redirect(url_for('index'))
+
 
 @app.route('/signup')
 def signup():
@@ -261,6 +293,7 @@ def predict():
 
 
 @app.route('/api/predict', methods=['POST'])
+@csrf.exempt  # API endpoint — clients use JSON, not session-based CSRF
 @limiter.limit("30 per minute")
 def api_predict():
 
@@ -653,6 +686,7 @@ def youtube_analyze():
 
 
 @app.route('/api/youtube-analyze', methods=['POST'])
+@csrf.exempt  # API endpoint — clients use JSON, not session-based CSRF
 @limiter.limit("10 per minute")
 def api_youtube_analyze():
 
