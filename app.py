@@ -16,7 +16,6 @@ load_dotenv()
 from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_wtf.csrf import CSRFProtect
 
 
 # Add project root to Python path
@@ -59,22 +58,20 @@ app.secret_key = _secret
 app.config['DEBUG'] = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 # ---------------------------------------------------------------
-# SESSION / CSRF CONFIGURATION
+# SESSION / COOKIE CONFIGURATION
 # SameSite=None + Secure are required for HF Spaces iframe embedding.
-# WTF_CSRF_TIME_LIMIT=None disables token expiry (prevents spurious failures).
+# CSRF is disabled — Firebase handles all authentication client-side,
+# so server-side CSRF is not needed and causes "session token missing"
+# errors when the session cookie isn't established before the POST.
 # ---------------------------------------------------------------
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['WTF_CSRF_SSL_STRICT'] = False   # Allow cross-origin POST (HF Spaces)
-app.config['WTF_CSRF_TIME_LIMIT'] = None    # Disable CSRF token expiry
+app.config['WTF_CSRF_ENABLED'] = False  # Disabled: Firebase handles auth client-side
 
 # Fix for running behind Hugging Face reverse proxy
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-
-# Initialize CSRF protection
-csrf = CSRFProtect(app)
 
 # Initialize rate limiter
 limiter = Limiter(
@@ -293,7 +290,6 @@ def predict():
 
 
 @app.route('/api/predict', methods=['POST'])
-@csrf.exempt  # API endpoint — clients use JSON, not session-based CSRF
 @limiter.limit("30 per minute")
 def api_predict():
 
@@ -686,7 +682,6 @@ def youtube_analyze():
 
 
 @app.route('/api/youtube-analyze', methods=['POST'])
-@csrf.exempt  # API endpoint — clients use JSON, not session-based CSRF
 @limiter.limit("10 per minute")
 def api_youtube_analyze():
 

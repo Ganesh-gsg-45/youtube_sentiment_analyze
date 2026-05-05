@@ -55,7 +55,8 @@
         </div>
 
         <div class="glass-card p-8 animate-slide-up">
-            <form id="loginForm" class="space-y-6">
+<form id="loginForm" method="POST" action="/login" class="space-y-6">
+
                 <div>
                     <label for="email" class="block text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Email Address</label>
                     <input type="email" id="email" name="email" placeholder="name@company.com"
@@ -98,11 +99,17 @@
     <script type="module">
         import { loginUser, googleLogin } from "{{ url_for('static', filename='js/auth.js') }}";
 
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            await loginUser(email, password);
+            const formData = new FormData(e.target);
+            const email = formData.get('email');
+            const password = formData.get('password');
+            try {
+                await loginUser(email, password);
+            } catch (err) {
+                console.log('Firebase failed, submitting form:', err);
+                e.target.submit(); // Fallback to server POST
+            }
         });
 
         document.getElementById('googleLoginBtn').addEventListener('click', async () => {
