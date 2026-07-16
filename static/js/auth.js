@@ -5,16 +5,36 @@ import {
     createUserWithEmailAndPassword,
     signOut,
     GoogleAuthProvider,
-    signInWithRedirect,
-    getRedirectResult
+    GithubAuthProvider,
+    signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
-const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: 'select_account' });
+// Google provider
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// GitHub provider
+const githubProvider = new GithubAuthProvider();
+githubProvider.addScope('read:user');
+githubProvider.addScope('user:email');
 
 /**
- * Log in an existing user
+ * Save user profile to Firestore after any OAuth sign-in
+ * @param {import('firebase/auth').User} user
+ * @param {string} providerHint
+ */
+async function saveUserProfile(user, providerHint) {
+    await setDoc(doc(db, "users", user.uid), {
+        name: user.displayName || user.email?.split('@')[0] || 'User',
+        email: user.email,
+        photoURL: user.photoURL || null,
+        provider: user.providerData?.[0]?.providerId || providerHint
+    }, { merge: true });
+}
+
+/**
+ * Log in an existing user with email/password
  * @param {string} email
  * @param {string} password
  */
@@ -25,7 +45,7 @@ export async function loginUser(email, password) {
 }
 
 /**
- * Sign up a new user
+ * Sign up a new user with email/password
  * @param {string} email
  * @param {string} password
  */
@@ -45,28 +65,29 @@ export async function logoutUser() {
 }
 
 /**
- * Log in with Google using a redirect flow
+ * Sign in with Google via popup
  */
 export async function googleLogin() {
-    await signInWithRedirect(auth, provider);
+    const result = await signInWithPopup(auth, googleProvider);
+    await saveUserProfile(result.user, 'google.com');
+    console.log("Google sign-in:", result.user);
+    return result;
 }
 
 /**
- * Handle the redirect result after Google authentication completes
+ * Sign in with GitHub via popup
+ */
+export async function githubLogin() {
+    const result = await signInWithPopup(auth, githubProvider);
+    await saveUserProfile(result.user, 'github.com');
+    console.log("GitHub sign-in:", result.user);
+    return result;
+}
+
+/**
+ * No-op kept for backwards compatibility — popup flow no longer needs redirect handling
  */
 export async function handleGoogleRedirectResult() {
-    const result = await getRedirectResult(auth);
-
-    if (!result?.user) {
-        return null;
-    }
-
-    await setDoc(doc(db, "users", result.user.uid), {
-        name: result.user.displayName || result.user.email?.split('@')[0] || 'User',
-        email: result.user.email,
-        provider: result.user.providerData?.[0]?.providerId || 'google.com'
-    }, { merge: true });
-
-    return result;
+    return null;
 }
 

@@ -91,6 +91,14 @@
                 <i class="fab fa-google"></i> Continue with Google
             </button>
 
+            <button type="button" id="githubSignupBtn"
+                style="width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:13px 20px; margin-top:10px; background:#24292e; border:1px solid rgba(255,255,255,0.12); border-radius:12px; color:#fff; font-size:0.95rem; font-weight:600; cursor:pointer; transition:all 0.25s; box-shadow:0 2px 8px rgba(0,0,0,0.3);"
+                onmouseover="this.style.background='#2f363d'; this.style.transform='scale(1.02)';"
+                onmouseout="this.style.background='#24292e'; this.style.transform='scale(1)';"
+            >
+                <i class="fab fa-github" style="font-size:1.1rem;"></i> Continue with GitHub
+            </button>
+
             <div class="mt-8 pt-6 border-t border-white/10 text-center">
                 <p class="text-sm text-slate-400">
                     Already have an account?
@@ -105,11 +113,9 @@
     </div>
 
     <script type="module">
-        import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=5";
+        import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=6";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-        import { signupUser, googleLogin, handleGoogleRedirectResult } from "{{ url_for('static', filename='js/auth.js') }}?v=5";
-
-        await handleGoogleRedirectResult();
+        import { signupUser, googleLogin, githubLogin } from "{{ url_for('static', filename='js/auth.js') }}?v=6";
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -154,6 +160,17 @@
             } catch (err) {
                 console.error('Google Signup Error:', err);
                 authMessage.textContent = err?.message || 'Google sign-in failed.';
+                authMessage.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('githubSignupBtn').addEventListener('click', async () => {
+            try {
+                await githubLogin();
+                window.location.href = '/';
+            } catch (err) {
+                console.error('GitHub Signup Error:', err);
+                authMessage.textContent = err?.message || 'GitHub sign-in failed. Make sure GitHub is enabled in Firebase.';
                 authMessage.classList.remove('hidden');
             }
         });
