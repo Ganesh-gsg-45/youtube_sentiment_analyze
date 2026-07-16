@@ -6,7 +6,8 @@ import {
     signOut,
     GoogleAuthProvider,
     GithubAuthProvider,
-    signInWithPopup
+    signInWithRedirect,
+    getRedirectResult
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
@@ -25,12 +26,16 @@ githubProvider.addScope('user:email');
  * @param {string} providerHint
  */
 async function saveUserProfile(user, providerHint) {
-    await setDoc(doc(db, "users", user.uid), {
-        name: user.displayName || user.email?.split('@')[0] || 'User',
-        email: user.email,
-        photoURL: user.photoURL || null,
-        provider: user.providerData?.[0]?.providerId || providerHint
-    }, { merge: true });
+    try {
+        await setDoc(doc(db, "users", user.uid), {
+            name: user.displayName || user.email?.split('@')[0] || 'User',
+            email: user.email,
+            photoURL: user.photoURL || null,
+            provider: user.providerData?.[0]?.providerId || providerHint
+        }, { merge: true });
+    } catch (e) {
+        console.warn("Could not save user profile to Firestore:", e?.message || e);
+    }
 }
 
 /**
@@ -65,29 +70,40 @@ export async function logoutUser() {
 }
 
 /**
- * Sign in with Google via popup
+ * Sign in with Google via redirect (avoids popup-blocked errors).
+ * The browser navigates to Google, then returns to the same page.
+ * Call handleRedirectResult() on page load to capture the sign-in result.
  */
 export async function googleLogin() {
-    const result = await signInWithPopup(auth, googleProvider);
-    await saveUserProfile(result.user, 'google.com');
-    console.log("Google sign-in:", result.user);
-    return result;
+    await signInWithRedirect(auth, googleProvider);
+    // Page navigates away — nothing executes after this
 }
 
 /**
- * Sign in with GitHub via popup
+ * Sign in with GitHub via redirect (avoids popup-blocked errors).
  */
 export async function githubLogin() {
-    const result = await signInWithPopup(auth, githubProvider);
-    await saveUserProfile(result.user, 'github.com');
-    console.log("GitHub sign-in:", result.user);
-    return result;
+    await signInWithRedirect(auth, githubProvider);
+    // Page navigates away — nothing executes after this
 }
 
 /**
- * No-op kept for backwards compatibility — popup flow no longer needs redirect handling
+ * Call this on every page load BEFORE setting up onAuthStateChanged.
+ * Captures the OAuth credential after the browser returns from the redirect.
+ * @returns {Promise<import('firebase/auth').UserCredential | null>}
  */
-export async function handleGoogleRedirectResult() {
-    return null;
+export async function handleRedirectResult() {
+    try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+            const provider = result.providerId || result.user.providerData?.[0]?.providerId || 'oauth';
+            await saveUserProfile(result.user, provider);
+            console.log("OAuth redirect sign-in successful:", result.user.email);
+            return result;
+        }
+        return null;
+    } catch (err) {
+        console.error("OAuth redirect result error:", err?.code, err?.message);
+        throw err;
+    }
 }
-

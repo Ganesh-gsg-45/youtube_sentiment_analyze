@@ -113,33 +113,53 @@
     </div>
 
     <script type="module">
-        import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=6";
+        import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=7";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-        import { signupUser, googleLogin, githubLogin } from "{{ url_for('static', filename='js/auth.js') }}?v=6";
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.location.href = '/';
-            }
-        });
+        import { signupUser, googleLogin, githubLogin, handleRedirectResult } from "{{ url_for('static', filename='js/auth.js') }}?v=7";
 
         const authMessage = document.createElement('div');
         authMessage.id = 'authMessage';
         authMessage.className = 'hidden mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300';
         document.getElementById('signupForm').appendChild(authMessage);
 
+        function showError(msg) {
+            authMessage.textContent = msg;
+            authMessage.classList.remove('hidden');
+        }
+        function hideError() {
+            authMessage.textContent = '';
+            authMessage.classList.add('hidden');
+        }
+
+        // ---- Capture OAuth redirect result on page load ----
+        try {
+            const redirectResult = await handleRedirectResult();
+            if (redirectResult && redirectResult.user) {
+                window.location.href = '/';
+            }
+        } catch (err) {
+            if (err?.code && err.code !== 'auth/no-auth-event') {
+                showError('OAuth sign-in failed: ' + (err?.message || err));
+            }
+        }
+
+        // ---- If already logged in, go to dashboard ----
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = '/';
+            }
+        });
+
+        // ---- Email/Password Signup ----
         document.getElementById('signupForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            hideError();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
 
-            authMessage.classList.add('hidden');
-            authMessage.textContent = '';
-
             if (password !== confirmPassword) {
-                authMessage.textContent = 'Passwords do not match.';
-                authMessage.classList.remove('hidden');
+                showError('Passwords do not match.');
                 return;
             }
 
@@ -148,33 +168,37 @@
                 window.location.href = '/';
             } catch (err) {
                 console.error('Signup Error:', err);
-                authMessage.textContent = err?.message || 'Signup failed. Please try again.';
-                authMessage.classList.remove('hidden');
+                let msg = 'Signup failed. Please try again.';
+                if (err?.code === 'auth/email-already-in-use') msg = 'An account with this email already exists.';
+                else if (err?.code === 'auth/weak-password') msg = 'Password must be at least 6 characters.';
+                else if (err?.message) msg = err.message;
+                showError(msg);
             }
         });
 
+        // ---- Google OAuth (redirect, no popup) ----
         document.getElementById('googleSignupBtn').addEventListener('click', async () => {
+            hideError();
             try {
-                await googleLogin();
-                window.location.href = '/';
+                await googleLogin(); // Redirects to Google
             } catch (err) {
                 console.error('Google Signup Error:', err);
-                authMessage.textContent = err?.message || 'Google sign-in failed.';
-                authMessage.classList.remove('hidden');
+                showError(err?.message || 'Google sign-in failed. Please try again.');
             }
         });
 
+        // ---- GitHub OAuth (redirect, no popup) ----
         document.getElementById('githubSignupBtn').addEventListener('click', async () => {
+            hideError();
             try {
-                await githubLogin();
-                window.location.href = '/';
+                await githubLogin(); // Redirects to GitHub
             } catch (err) {
                 console.error('GitHub Signup Error:', err);
-                authMessage.textContent = err?.message || 'GitHub sign-in failed. Make sure GitHub is enabled in Firebase.';
-                authMessage.classList.remove('hidden');
+                showError(err?.message || 'GitHub sign-in failed. Make sure GitHub is enabled in Firebase Console.');
             }
         });
 
+        // ---- Theme Toggle ----
         const themeToggleBtn = document.getElementById('themeToggleBtn');
         const htmlElement = document.documentElement;
 
@@ -186,11 +210,7 @@
 
         themeToggleBtn.addEventListener('click', () => {
             htmlElement.classList.toggle('dark');
-            if (htmlElement.classList.contains('dark')) {
-                localStorage.setItem('theme', 'dark');
-            } else {
-                localStorage.setItem('theme', 'light');
-            }
+            localStorage.setItem('theme', htmlElement.classList.contains('dark') ? 'dark' : 'light');
         });
     </script>
 </body>
