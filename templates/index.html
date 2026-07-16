@@ -418,9 +418,30 @@
                     </div>
                 </section>
                 {% endif %}
+
+                <!-- Comments Panel -->
+                {% if yr.comments %}
+                <section class="glass-card p-6 animate-slide-up" style="animation-delay: 0.4s;" id="panelComments">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-comments text-brand2"></i> All Comments
+                        <span class="ml-auto text-xs text-slate-500 font-normal">{{ yr.total_comments_fetched }} analyzed</span>
+                    </h2>
+                    <!-- Filter Tabs -->
+                    <div class="flex gap-2 flex-wrap mb-4">
+                        <button id="tab-all" onclick="switchTab('all')" class="tab-btn active">All</button>
+                        <button id="tab-positive" onclick="switchTab('positive')" class="tab-btn positive">😊 Positive</button>
+                        <button id="tab-negative" onclick="switchTab('negative')" class="tab-btn negative">😞 Negative</button>
+                        <button id="tab-neutral" onclick="switchTab('neutral')" class="tab-btn neutral">😐 Neutral</button>
+                    </div>
+                    <!-- Comments List -->
+                    <div id="commentsContainer" class="flex flex-col gap-2"></div>
+                    <!-- Pagination -->
+                    <div id="commentPagination" class="flex justify-center gap-1 mt-4 flex-wrap"></div>
+                </section>
+                {% endif %}
+
             </div>
             {% endif %}
-        </div>
 
         <!-- ==================== TEXT ANALYSIS RESULTS ==================== -->
         <div id="content-text" class="tab-content hidden">
@@ -552,16 +573,16 @@
         const YT_DATA = {
             donut: {
                 positive: {{ youtube_result.sentiment_distribution.Positive.percentage }},
-        negative: { { youtube_result.sentiment_distribution.Negative.percentage } },
-        neutral: { { youtube_result.sentiment_distribution.Neutral.percentage } }
-        },
-        trend: { { youtube_result.trend_data | tojson } },
-        comments: { { youtube_result.comments | tojson } },
-        score: {
-            value: { { youtube_result.final_score.score } },
-            color: "{{ youtube_result.final_score.color }}"
-        }
-    };
+                negative: {{ youtube_result.sentiment_distribution.Negative.percentage }},
+                neutral: {{ youtube_result.sentiment_distribution.Neutral.percentage }}
+            },
+            trend: {{ youtube_result.trend_data | tojson }},
+            comments: {{ youtube_result.comments | tojson }},
+            score: {
+                value: {{ youtube_result.final_score.score }},
+                color: "{{ youtube_result.final_score.color }}"
+            }
+        };
     </script>
     {% endif %}
 
