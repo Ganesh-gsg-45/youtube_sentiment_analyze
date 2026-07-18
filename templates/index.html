@@ -36,17 +36,40 @@
             }
         }
     </script>
-    <!-- Firebase Auth Protection -->
+    <!-- Firebase Auth Protection (server-side gate via fb_id_token cookie) -->
     <script type="module">
         import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=4";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
-        onAuthStateChanged(auth, (user) => {
+        const FB_ID_TOKEN_COOKIE = "fb_id_token";
+
+        function setCookie(name, value, { path = "/", sameSite = "Lax", secure = false } = {}) {
+            let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=${path}; SameSite=${sameSite}`;
+            if (secure) cookie += "; Secure";
+            // Not HttpOnly; server-side verifies signature, and this is only needed for auth gate.
+            document.cookie = cookie;
+        }
+
+        function clearCookie(name, { path = "/" } = {}) {
+            document.cookie = `${encodeURIComponent(name)}=; Path=${path}; SameSite=Lax; Max-Age=0`;
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            const secure = (window.location.protocol === "https:");
             if (!user) {
+                clearCookie(FB_ID_TOKEN_COOKIE);
                 window.location.href = "/login";
-            } else {
-                document.body.classList.remove('opacity-0');
+                return;
             }
+
+            try {
+                const token = await user.getIdToken();
+                setCookie(FB_ID_TOKEN_COOKIE, token, { path: "/", sameSite: "Lax", secure });
+            } catch (e) {
+                console.warn("Failed to set fb_id_token cookie:", e);
+            }
+
+            document.body.classList.remove('opacity-0');
         });
     </script>
     <style>

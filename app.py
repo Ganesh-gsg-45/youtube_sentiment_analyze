@@ -38,6 +38,95 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 
+# ---------------------------
+# Server-side Firebase auth gate
+# ---------------------------
+FB_ID_TOKEN_COOKIE = "fb_id_token"
+_firebase_admin_app = None
+
+
+def _init_firebase_admin():
+    """Initialize Firebase Admin once using the service account JSON in this repo."""
+    global _firebase_admin_app
+    if _firebase_admin_app is not None:
+        return _firebase_admin_app
+
+    try:
+        import firebase_admin
+        from firebase_admin import credentials
+
+        service_account_path = os.environ.get(
+            "GOOGLE_APPLICATION_CREDENTIALS",
+            str(project_root / "sentimentscope-ced63-firebase-adminsdk-fbsvc-f54b1903d1.json"),
+        )
+        cred = credentials.Certificate(service_account_path)
+        _firebase_admin_app = firebase_admin.initialize_app(cred)
+    except Exception as e:
+        logger.warning(f"Firebase Admin init failed: {e}")
+        _firebase_admin_app = False
+
+    return _firebase_admin_app
+
+
+def verify_firebase_id_token():
+    """
+    Verify Firebase ID token from cookie.
+    Returns decoded claims dict on success, else None.
+    """
+    token = request.cookies.get(FB_ID_TOKEN_COOKIE, "")
+    if not token:
+        return None
+
+    try:
+        import firebase_admin
+        from firebase_admin import auth
+
+        if _init_firebase_admin() is False:
+            return None
+
+        decoded = auth.verify_id_token(token, check_revoked=False)
+        return decoded
+    except Exception as e:
+        logger.info(f"Firebase ID token verification failed: {type(e).__name__}: {e}")
+        return None
+
+
+def _is_protected_route():
+    # Protect UI + sensitive API endpoints that return injected analysis data.
+    protected_prefixes = (
+        "/",
+        "/predict",
+        "/youtube-analyze",
+        "/api/predict",
+        "/api/youtube-analyze",
+        "/history",
+        "/clear-history",
+    )
+
+    # Use prefix matching to avoid accidental bypass due to minor path variants.
+    # '/' must be treated as a special case (everything is '/...' so protect it explicitly)
+    if request.path == "/":
+        return True
+
+    return any(request.path.startswith(p) for p in protected_prefixes)
+
+
+@app.before_request
+def enforce_server_auth():
+    # Allow public auth pages
+    if request.path in ("/login", "/signup", "/health"):
+        return None
+
+    if not _is_protected_route():
+        return None
+
+    claims = verify_firebase_id_token()
+    if claims is None:
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Unauthorized"}), 401
+        # HTML routes: redirect to login
+        return redirect(url_for("login"))
+
 _secret = os.environ.get('FLASK_SECRET_KEY', '')
 if not _secret or _secret == 'your-super-secret-key-here-change-in-production':
     # Log a loud warning — this will break CSRF with multiple workers
@@ -523,16 +612,7 @@ def compute_final_score(sentiment_distribution: dict) -> dict:
 
 
 def analyze_youtube_video(video_url: str, max_comments: int = 200) -> dict:
-    """
-    Analyze sentiment of comments from a YouTube video.
-    
-    Args:
-        video_url: YouTube video URL.
-        max_comments: Maximum comments to analyze.
-        
-    Returns:
-        Dictionary with analysis results.
-    """
+   
     global pipeline
     
     # Initialize pipeline if not already done
