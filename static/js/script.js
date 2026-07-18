@@ -154,10 +154,22 @@ function clearForm() {
     const charCount = document.getElementById('charCount');
     if (textarea) { textarea.value = ''; textarea.focus(); }
     if (charCount) { charCount.textContent = '0'; charCount.style.color = '#64748b'; }
+
+    // Hide result card and error box
     const rs = document.getElementById('resultSection');
     if (rs) rs.classList.add('hidden');
     const errBox = document.getElementById('textErrorBox');
     if (errBox) errBox.classList.add('hidden');
+
+    // Clear history DOM immediately (optimistic)
+    const historyList = document.getElementById('historyList');
+    if (historyList) {
+        historyList.innerHTML = '<p id="historyEmpty" class="text-slate-500 text-center py-5">No predictions yet. Analyze text above!</p>';
+    }
+
+    // Clear server-side session history
+    fetch('/clear-history', { method: 'POST' })
+        .catch(err => console.warn('Could not clear server history:', err));
 }
 
 

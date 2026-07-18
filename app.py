@@ -13,7 +13,7 @@ import math
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify, session
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -90,8 +90,26 @@ else:
 # Initialize prediction pipeline
 pipeline = None
 
-# In-memory prediction history (max 20 items)
-prediction_history = deque(maxlen=20)
+# Per-session prediction history — keyed by Flask session, NOT a shared global.
+# Session is signed with SECRET_KEY so clients cannot tamper with it.
+# Max 20 items per session stored as a list in session['history'].
+_HISTORY_MAX = 20
+
+def get_session_history() -> list:
+    """Return this session's prediction history (most-recent first)."""
+    return session.get('history', [])
+
+def add_to_session_history(entry: dict) -> None:
+    """Prepend an entry to this session's history, capping at _HISTORY_MAX."""
+    history = session.get('history', [])
+    history.insert(0, entry)
+    session['history'] = history[:_HISTORY_MAX]
+    session.modified = True
+
+def clear_session_history() -> None:
+    """Wipe this session's prediction history."""
+    session['history'] = []
+    session.modified = True
 
 # Icon mapping for sentiments
 SENTIMENT_ICONS = {
@@ -220,14 +238,10 @@ def get_model_info():
 def index():
     """Render the main page with prediction form and history."""
     model_info = get_model_info()
-    
-    # Convert history deque to list for template
-    history_list = list(prediction_history)
-    
     return render_template(
         'index.html',
         result=None,
-        history=history_list,
+        history=get_session_history(),
         model_info=model_info
     )
 
@@ -251,6 +265,19 @@ def login_post():
 def signup():
     """Render signup page."""
     return render_template('signup.html')
+
+
+@app.route('/signup', methods=['POST'])
+def signup_post():
+    """
+    Safety fallback: if the signup JS module fails to load the browser may
+    submit the form here. We never process credentials server-side — just
+    redirect back to /signup with a visible message so the user knows JS is
+    required. This prevents the browser's GET-fallback which would append
+    the password to the URL query string.
+    """
+    flash('JavaScript is required for sign-up. Please enable it and try again.', 'warning')
+    return redirect(url_for('signup'))
 
 
 @app.route('/predict', methods=['POST'])
@@ -287,8 +314,8 @@ def predict():
         # Add icon to result
         result['icon'] = SENTIMENT_ICONS.get(result['sentiment'], 'circle')
         
-        # Add to history
-        prediction_history.appendleft({
+        # Add to session history (per-user, not shared)
+        add_to_session_history({
             'text': text,
             'sentiment': result['sentiment'],
             'predicted_label': result['predicted_label'],
@@ -303,7 +330,7 @@ def predict():
         return render_template(
             'index.html',
             result=result,
-            history=list(prediction_history),
+            history=get_session_history(),
             model_info=model_info
         )
         
@@ -338,6 +365,16 @@ def api_predict():
     
     try:
         result = pipeline.predict(text)
+
+        # Save to this user's session history
+        add_to_session_history({
+            'text': text,
+            'sentiment': result['sentiment'],
+            'predicted_label': result['predicted_label'],
+            'confidence': result['confidence'] or 0,
+            'timestamp': datetime.now().strftime('%H:%M:%S')
+        })
+
         return {
             'success': True,
             'text': result['text'],
@@ -358,10 +395,11 @@ def health():
 
 @app.route('/history')
 def get_history():
-    """Get prediction history (API)."""
+    """Return this session's prediction history (never another user's)."""
+    history = get_session_history()
     return {
-        'history': list(prediction_history),
-        'count': len(prediction_history)
+        'history': history,
+        'count': len(history)
     }
 
 
@@ -676,7 +714,7 @@ def youtube_analyze():
         return render_template(
             'index.html',
             youtube_error="Please enter a YouTube video URL.",
-            history=list(prediction_history),
+            history=get_session_history(),
             model_info=model_info
         )
 
@@ -690,7 +728,7 @@ def youtube_analyze():
             return render_template(
                 'index.html',
                 youtube_error=result['error'],
-                history=list(prediction_history),
+                history=get_session_history(),
                 model_info=model_info
             )
 
@@ -700,7 +738,7 @@ def youtube_analyze():
         return render_template(
             'index.html',
             youtube_result=result,
-            history=list(prediction_history),
+            history=get_session_history(),
             model_info=model_info
         )
         
@@ -710,7 +748,7 @@ def youtube_analyze():
         return render_template(
             'index.html',
             youtube_error=str(e),
-            history=list(prediction_history),
+            history=get_session_history(),
             model_info=model_info
         )
     except HttpError as e:
@@ -732,7 +770,7 @@ def youtube_analyze():
         return render_template(
             'index.html',
             youtube_error=user_msg,
-            history=list(prediction_history),
+            history=get_session_history(),
             model_info=model_info
         )
     except Exception as e:
@@ -744,7 +782,7 @@ def youtube_analyze():
         return render_template(
             'index.html',
             youtube_error=user_msg,
-            history=list(prediction_history),
+            history=get_session_history(),
             model_info=model_info
         )
 
@@ -773,11 +811,13 @@ def api_youtube_analyze():
 @app.route('/clear-history', methods=['POST'])
 @limiter.limit("10 per minute")
 def clear_history():
-
-    """Clear prediction history."""
-    prediction_history.clear()
-    flash("Prediction history cleared.", "info")
-    return redirect(url_for('index'))
+    """
+    Clear this session's prediction history.
+    Session-scoped: only affects the calling user, never anyone else's history.
+    Returns JSON so the frontend can call it via fetch() without a page reload.
+    """
+    clear_session_history()
+    return jsonify({'success': True, 'message': 'History cleared.'})
 
 
 @app.errorhandler(429)
