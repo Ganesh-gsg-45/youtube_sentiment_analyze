@@ -54,6 +54,26 @@
             transition: opacity 0.3s;
         }
     </style>
+    {% if result %}
+    <!-- Switch to text tab immediately, before Firebase resolves, to prevent flash -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Force text tab active if result exists (set by Flask)
+            var ct = document.getElementById('content-text');
+            var cv = document.getElementById('content-video');
+            var ht = document.getElementById('hero-text');
+            var hv = document.getElementById('hero-video');
+            var tb = document.getElementById('main-tab-text');
+            var vb = document.getElementById('main-tab-video');
+            if (ct) { ct.classList.remove('hidden'); }
+            if (cv) { cv.classList.add('hidden'); }
+            if (ht) { ht.classList.remove('hidden'); }
+            if (hv) { hv.classList.add('hidden'); }
+            if (tb) { tb.classList.add('active'); }
+            if (vb) { vb.classList.remove('active'); }
+        });
+    </script>
+    {% endif %}
 </head>
 
 <body
@@ -135,22 +155,22 @@
                 {% endif %}
             </div>
 
-            <!-- Text Input -->
+            <!-- Text Input (AJAX — no page reload) -->
             <div id="hero-text" class="hero-input-wrap hidden">
                 <h2 class="text-2xl md:text-3xl font-bold text-center mb-2">Single Text Analysis</h2>
                 <p class="text-slate-400 text-center mb-8 max-w-lg mx-auto">Enter a comment or text to analyze its
                     sentiment directly.</p>
-                <form id="predictionForm" method="POST" action="/predict" class="max-w-2xl mx-auto">
+                <div class="max-w-2xl mx-auto">
                     <div class="relative mb-4">
-                        <textarea name="text" id="inputText" rows="4"
+                        <textarea id="inputText" rows="4"
                             placeholder="Type your text here… (e.g., 'This video is absolutely amazing!')"
                             class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all resize-y"
-                            required></textarea>
+                            maxlength="500"></textarea>
                         <div class="absolute bottom-3 right-3 text-xs text-slate-500"><span id="charCount">0</span> /
                             500</div>
                     </div>
                     <div class="flex gap-3 justify-center">
-                        <button type="submit"
+                        <button id="analyzeBtn" type="button" onclick="runTextAnalysis()"
                             class="px-8 py-3 bg-gradient-to-r from-brand to-brand2 text-white font-bold rounded-xl hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg shadow-brand/25">
                             <i class="fas fa-magic mr-2"></i> Analyze Sentiment
                         </button>
@@ -159,10 +179,10 @@
                             <i class="fas fa-trash mr-2"></i> Clear
                         </button>
                     </div>
-                </form>
-                <div id="loading" class="loading hidden mt-6 justify-center">
-                    <div class="spinner"></div>
-                    <p class="text-slate-400 text-sm ml-3">Analyzing sentiment…</p>
+                    <div id="loading" class="loading hidden mt-6 justify-center">
+                        <div class="spinner"></div>
+                        <p class="text-slate-400 text-sm ml-3">Analyzing sentiment…</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -445,81 +465,75 @@
 
         <!-- ==================== TEXT ANALYSIS RESULTS ==================== -->
         <div id="content-text" class="tab-content hidden">
-            <!-- Text Result -->
-            <section id="resultSection" class="{% if not result %}hidden{% endif %} mb-6 animate-slide-up">
-                <div
-                    class="glass-card p-6 border-l-4 {% if result %}{% if result.sentiment == 'Positive' %}border-l-pos{% elif result.sentiment == 'Negative' %}border-l-neg{% else %}border-l-neu{% endif %}{% endif %}">
+            <!-- AJAX result renders here -->
+            <section id="resultSection" class="hidden mb-6 animate-slide-up">
+                <div id="resultCard" class="glass-card p-6 border-l-4 border-l-brand">
                     <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
                         <i class="fas fa-chart-pie text-brand2"></i> Analysis Result
                     </h2>
                     <div class="space-y-4">
-                        <div
-                            class="inline-flex items-center gap-3 px-5 py-2.5 rounded-xl {% if result %}{% if result.sentiment == 'Positive' %}bg-pos/10 text-pos{% elif result.sentiment == 'Negative' %}bg-neg/10 text-neg{% else %}bg-neu/10 text-neu{% endif %}{% endif %}">
-                            <i class="fas fa-{{ result.icon if result else 'circle' }}"></i>
-                            <span class="font-bold text-lg">{{ result.sentiment if result else 'Unknown' }}</span>
+                        <div id="sentimentBadge" class="inline-flex items-center gap-3 px-5 py-2.5 rounded-xl bg-brand/10 text-brand">
+                            <i id="sentimentIcon" class="fas fa-circle"></i>
+                            <span id="sentimentLabel" class="font-bold text-lg">—</span>
                         </div>
                         <div>
                             <div class="flex justify-between text-sm text-slate-400 mb-2">
                                 <span>Confidence</span>
-                                <span class="font-bold text-white">{{ "%.2f"|format((result.confidence * 100) if result
-                                    else 0) }}%</span>
+                                <span id="confidencePct" class="font-bold text-white">0%</span>
                             </div>
                             <div class="h-2.5 bg-white/5 rounded-full overflow-hidden">
-                                <div class="h-full rounded-full bg-gradient-to-r from-brand to-brand2 transition-all duration-1000"
-                                    style="width: {{ (result.confidence * 100) if result else 0 }}%"></div>
+                                <div id="confidenceBar" class="h-full rounded-full bg-gradient-to-r from-brand to-brand2 transition-all duration-700" style="width:0%"></div>
                             </div>
                         </div>
                         <div class="space-y-3">
                             <div>
-                                <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Original
-                                    Text</span>
-                                <p class="text-sm text-slate-300 bg-white/5 p-3 rounded-lg">{{ result.text if result
-                                    else '' }}</p>
+                                <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Original Text</span>
+                                <p id="originalText" class="text-sm text-slate-300 bg-white/5 p-3 rounded-lg"></p>
                             </div>
                             <div>
-                                <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Processed
-                                    Text</span>
-                                <p class="text-sm text-slate-400 bg-white/5 p-3 rounded-lg font-mono text-xs">{{
-                                    result.processed_text if result else '' }}</p>
-                            </div>
-                            <div>
-                                <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Predicted
-                                    Label</span>
-                                <span class="text-sm font-bold text-brand3">{{ result.predicted_label if result else ''
-                                    }}</span>
+                                <span class="text-xs text-slate-500 uppercase tracking-wider block mb-1">Processed Text</span>
+                                <p id="processedText" class="text-sm text-slate-400 bg-white/5 p-3 rounded-lg font-mono text-xs"></p>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
+
+            <!-- Error box -->
+            <div id="textErrorBox" class="hidden mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-sm mb-6">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span id="textErrorMsg"></span>
+            </div>
 
             <!-- History -->
             <section class="glass-card p-6 animate-slide-up">
                 <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
                     <i class="fas fa-history text-brand2"></i> Recent Predictions
                 </h2>
-                {% if history %}
-                <div class="flex flex-col gap-2.5">
+                <div id="historyList" class="flex flex-col gap-2.5">
+                    {% if history %}
                     {% for item in history %}
                     <div class="history-item sentiment-{{ item.sentiment|lower }}">
                         <div class="text-sm text-slate-300 flex-1 min-w-0 truncate">{{ item.text[:80] }}{% if
                             item.text|length > 80 %}…{% endif %}</div>
                         <div class="flex items-center gap-2 flex-shrink-0">
                             <span
-                                class="px-2.5 py-1 rounded-full text-xs font-bold {% if item.sentiment == 'Positive' %}bg-pos/15 text-pos{% elif item.sentiment == 'Negative' %}bg-neg/15 text-neg{% else %}bg-neu/15 text-neu{% endif %}">{{
+                                class="px-2.5 py-1 rounded-full text-xs font-bold {% if item.sentiment == 'Positive' %}bg-pos/15 text-pos{% elif item.sentiment == 'Negative' %}bg-neg/15 text-neg{% else %}bg-neu/15 text-neu{% endif %}"{{
                                 item.sentiment }}</span>
                             <span class="text-xs text-slate-500">{{ "%.0f"|format(item.confidence * 100) }}%</span>
                         </div>
                     </div>
                     {% endfor %}
+                    {% else %}
+                    <p id="historyEmpty" class="text-slate-500 text-center py-5">No predictions yet. Analyze text above!</p>
+                    {% endif %}
                 </div>
-                {% else %}
-                <p class="text-slate-500 text-center py-5">No predictions yet. Analyze text above!</p>
-                {% endif %}
             </section>
         </div>
 
+
         <!-- ==================== MODEL INFO (Collapsible) ==================== -->
+
         <section class="mt-8">
             <button onclick="toggleModelInfo()"
                 class="w-full glass-card p-4 flex items-center justify-between hover:bg-white/[0.06] transition-all">
@@ -586,7 +600,7 @@
     </script>
     {% endif %}
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=3"></script>
     <script type="module">
         import { logoutUser } from "{{ url_for('static', filename='js/auth.js') }}";
         document.getElementById('logoutBtn').addEventListener('click', logoutUser);

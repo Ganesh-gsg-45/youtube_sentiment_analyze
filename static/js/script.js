@@ -53,49 +53,114 @@ function toggleModelInfo() {
     }
 }
 
+
 // ----------------------------------------------------------------
-// TEXT PREDICTION FORM
+// TEXT PREDICTION — AJAX (no page reload)
 // ----------------------------------------------------------------
-const textarea = document.getElementById('inputText');
-const charCount = document.getElementById('charCount');
-const form = document.getElementById('predictionForm');
-const loading = document.getElementById('loading');
+async function runTextAnalysis() {
+    const textarea = document.getElementById('inputText');
+    const text = textarea ? textarea.value.trim() : '';
+    if (!text) { textarea && textarea.focus(); return; }
 
-if (textarea) {
-    textarea.addEventListener('input', function () {
-        const len = this.value.length;
-        charCount.textContent = len;
-        if (len > 500) {
-            this.value = this.value.substring(0, 500);
-            charCount.textContent = 500;
+    const btn     = document.getElementById('analyzeBtn');
+    const loading = document.getElementById('loading');
+    const errBox  = document.getElementById('textErrorBox');
+    const errMsg  = document.getElementById('textErrorMsg');
+
+    // Show loading state
+    if (btn)     { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing…'; }
+    if (loading) loading.classList.remove('hidden');
+    if (errBox)  errBox.classList.add('hidden');
+
+    // Make sure text tab content is visible
+    switchMainTab('text');
+
+    try {
+        const body = new URLSearchParams({ text });
+        const resp = await fetch('/api/predict', { method: 'POST', body });
+        const data = await resp.json();
+
+        if (!resp.ok || data.error) {
+            throw new Error(data.error || 'Server error');
         }
-        charCount.style.color = len > 400 ? '#ef4444' : len > 300 ? '#f59e0b' : '#64748b';
-    });
 
-    textarea.addEventListener('keydown', function (e) {
-        if (e.ctrlKey && e.key === 'Enter' && form) {
-            form.requestSubmit();
+        // Populate result card
+        const sentMap = {
+            'Positive': { cls: 'bg-pos/10 text-pos', borderCls: 'border-l-pos', icon: 'fa-smile' },
+            'Negative': { cls: 'bg-neg/10 text-neg', borderCls: 'border-l-neg', icon: 'fa-frown' },
+            'Neutral':  { cls: 'bg-neu/10 text-neu', borderCls: 'border-l-neu', icon: 'fa-meh'  }
+        };
+        const s = sentMap[data.sentiment] || { cls: 'bg-brand/10 text-brand', borderCls: 'border-l-brand', icon: 'fa-circle' };
+        const pct = Math.round((data.confidence || 0) * 100);
+
+        const card   = document.getElementById('resultCard');
+        const badge  = document.getElementById('sentimentBadge');
+        const icon   = document.getElementById('sentimentIcon');
+        const label  = document.getElementById('sentimentLabel');
+        const bar    = document.getElementById('confidenceBar');
+        const pctEl  = document.getElementById('confidencePct');
+        const origEl = document.getElementById('originalText');
+        const procEl = document.getElementById('processedText');
+
+        if (card)   { card.className = `glass-card p-6 border-l-4 ${s.borderCls}`; }
+        if (badge)  { badge.className = `inline-flex items-center gap-3 px-5 py-2.5 rounded-xl ${s.cls}`; }
+        if (icon)   { icon.className = `fas ${s.icon}`; }
+        if (label)  label.textContent = data.sentiment;
+        if (pctEl)  pctEl.textContent = pct + '%';
+        if (bar)    { bar.style.width = '0%'; setTimeout(() => { bar.style.width = pct + '%'; }, 50); }
+        if (origEl) origEl.textContent = data.text || text;
+        if (procEl) procEl.textContent = data.processed_text || '';
+
+        // Show the result section
+        const rs = document.getElementById('resultSection');
+        if (rs) {
+            rs.classList.remove('hidden');
+            setTimeout(() => rs.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
         }
-    });
-}
 
-if (form) {
-    form.addEventListener('submit', function () {
-        if (loading) loading.classList.remove('hidden');
-        const btn = form.querySelector('button[type="submit"]');
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing…'; }
-    });
+        // Prepend to history list
+        const historyList  = document.getElementById('historyList');
+        const historyEmpty = document.getElementById('historyEmpty');
+        if (historyList && data.sentiment) {
+            if (historyEmpty) historyEmpty.remove();
+            const sentCls = data.sentiment === 'Positive' ? 'bg-pos/15 text-pos'
+                          : data.sentiment === 'Negative' ? 'bg-neg/15 text-neg'
+                          : 'bg-neu/15 text-neu';
+            const shortened = text.length > 80 ? text.slice(0, 80) + '…' : text;
+            const item = document.createElement('div');
+            item.className = `history-item sentiment-${data.sentiment.toLowerCase()}`;
+            item.innerHTML = `
+                <div class="text-sm text-slate-300 flex-1 min-w-0 truncate">${shortened}</div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <span class="px-2.5 py-1 rounded-full text-xs font-bold ${sentCls}">${data.sentiment}</span>
+                    <span class="text-xs text-slate-500">${pct}%</span>
+                </div>`;
+            historyList.prepend(item);
+        }
+
+    } catch (err) {
+        if (errBox && errMsg) {
+            errMsg.textContent = err.message || 'Analysis failed. Please try again.';
+            errBox.classList.remove('hidden');
+        }
+    } finally {
+        if (btn)     { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic mr-2"></i> Analyze Sentiment'; }
+        if (loading) loading.classList.add('hidden');
+    }
 }
 
 function clearForm() {
-    if (textarea) { textarea.value = ''; charCount.textContent = '0'; charCount.style.color = '#64748b'; textarea.focus(); }
+    const textarea = document.getElementById('inputText');
+    const charCount = document.getElementById('charCount');
+    if (textarea) { textarea.value = ''; textarea.focus(); }
+    if (charCount) { charCount.textContent = '0'; charCount.style.color = '#64748b'; }
     const rs = document.getElementById('resultSection');
     if (rs) rs.classList.add('hidden');
-    if (form) {
-        const btn = form.querySelector('button[type="submit"]');
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic"></i> Analyze Sentiment'; }
-    }
+    const errBox = document.getElementById('textErrorBox');
+    if (errBox) errBox.classList.add('hidden');
 }
+
+
 
 // ----------------------------------------------------------------
 // YOUTUBE FORM — LOADING STATE
@@ -118,6 +183,22 @@ if (youtubeForm) {
 // ANIMATE PROGRESS BARS ON LOAD
 // ----------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
+    // Char counter for text textarea
+    const ta = document.getElementById('inputText');
+    const cc = document.getElementById('charCount');
+    if (ta && cc) {
+        ta.addEventListener('input', function () {
+            const len = this.value.length;
+            cc.textContent = len;
+            cc.style.color = len > 400 ? '#ef4444' : len > 300 ? '#f59e0b' : '#64748b';
+        });
+        // Ctrl+Enter shortcut
+        ta.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && e.key === 'Enter') runTextAnalysis();
+        });
+    }
+
+    // Animate progress bars on load
     document.querySelectorAll('.progress-fill, .score-bar-fill').forEach(el => {
         const w = el.style.width;
         el.style.width = '0%';
@@ -408,6 +489,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const resultSection = document.getElementById('resultSection');
     if (resultSection && !resultSection.classList.contains('hidden')) {
         switchMainTab('text');
+        // Scroll to result so user sees it immediately
+        setTimeout(() => resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
     }
 
     // Only run if YouTube result data exists

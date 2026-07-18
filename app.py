@@ -53,8 +53,13 @@ app.secret_key = _secret
 app.config['DEBUG'] = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-app.config['SESSION_COOKIE_SECURE'] = True
+# Use Secure cookies only when running over HTTPS (production/HuggingFace).
+# On localhost (HTTP), Secure=True blocks cookies entirely — causing flash/session failures.
+_is_https = os.environ.get('FLASK_ENV', '').lower() == 'production' or \
+            os.environ.get('HTTPS', '').lower() in ('on', 'true', '1') or \
+            os.environ.get('HF_SPACE_ID') is not None  # Hugging Face Spaces uses HTTPS
+app.config['SESSION_COOKIE_SAMESITE'] = 'None' if _is_https else 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = _is_https
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['WTF_CSRF_ENABLED'] = False  # Disabled: Firebase handles auth client-side
 
@@ -71,6 +76,17 @@ limiter = Limiter(
 )
 
 
+# Validate YouTube API key at startup
+_yt_api_key = os.environ.get('YOUTUBE_API_KEY', '')
+if not _yt_api_key:
+    logger.warning(
+        "YOUTUBE_API_KEY is not set in .env! "
+        "YouTube video analysis will fail. "
+        "Get a key at: https://console.cloud.google.com/apis/library/youtube.googleapis.com"
+    )
+else:
+    logger.info(f"YouTube API key loaded (prefix: {_yt_api_key[:8]}...)")
+
 # Initialize prediction pipeline
 pipeline = None
 
@@ -83,6 +99,15 @@ SENTIMENT_ICONS = {
     'Negative': 'frown',
     'Neutral': 'meh'
 }
+
+
+def _sanitize_error(msg: str) -> str:
+    """Strip API keys and secrets from error messages before showing to users."""
+    # Remove &key=... or ?key=... from URLs embedded in error strings
+    msg = re.sub(r'[?&]key=[A-Za-z0-9_-]+', '&key=***REDACTED***', msg)
+    # Remove any raw AIzaSy... pattern (Google API key format)
+    msg = re.sub(r'AIzaSy[A-Za-z0-9_-]{30,}', '***REDACTED***', msg)
+    return msg
 
 def sanitize_input(text: str, max_length: int = 500) -> str:
     """
@@ -118,8 +143,18 @@ def add_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     # X-Frame-Options removed to allow embedding in Hugging Face Spaces
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://i.ytimg.com https://img.youtube.com https://lh3.googleusercontent.com; connect-src 'self' https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.gstatic.com https://apis.google.com; frame-src 'self' https://sentimentscope-ced63.firebaseapp.com https://*.firebaseapp.com;"
+    if _is_https:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://www.gstatic.com https://apis.google.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: https://i.ytimg.com https://img.youtube.com https://lh3.googleusercontent.com; "
+        "connect-src 'self' https://cdn.jsdelivr.net https://www.googleapis.com https://identitytoolkit.googleapis.com "
+        "https://securetoken.googleapis.com https://firestore.googleapis.com https://www.gstatic.com https://apis.google.com; "
+        "frame-src 'self' https://sentimentscope-ced63.firebaseapp.com https://*.firebaseapp.com;"
+    )
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
     return response
@@ -477,13 +512,57 @@ def analyze_youtube_video(video_url: str, max_comments: int = 200) -> dict:
     if not video_id:
         raise ValueError("Invalid YouTube URL. Could not extract video ID.")
     
-    # Get video details
-    video_details = extractor.get_video_details(video_id)
+    # Get video details (this also validates the API key is working)
+    try:
+        video_details = extractor.get_video_details(video_id)
+    except HttpError as e:
+        status = e.resp.status if hasattr(e, 'resp') else 0
+        details = str(e)
+        if status == 403:
+            if 'quotaExceeded' in details:
+                raise ValueError(
+                    "YouTube API quota exceeded for today. "
+                    "Free tier allows 10,000 units/day. Try again tomorrow."
+                )
+            else:
+                raise ValueError(
+                    "YouTube API key is blocked or restricted. "
+                    "Please create a new API key at https://console.cloud.google.com "
+                    "and update YOUTUBE_API_KEY in your .env file."
+                )
+        elif status == 404:
+            raise ValueError("Video not found. Please check the URL.")
+        else:
+            raise ValueError(f"YouTube API error ({status}): {_sanitize_error(details[:200])}")
     
     # Fetch comments (limited for web request)
     logger.info(f"Fetching up to {max_comments} comments for video {video_id}")
-    comments_data = extractor.fetch_comments(video_id, max_results=max_comments)
-    
+    try:
+        comments_data = extractor.fetch_comments(video_id, max_results=max_comments)
+    except HttpError as e:
+        status = e.resp.status if hasattr(e, 'resp') else 0
+        details = str(e)
+        if status == 403:
+            if 'quotaExceeded' in details:
+                raise ValueError(
+                    "YouTube API quota exceeded for today. "
+                    "Free tier allows 10,000 units/day. Try again tomorrow."
+                )
+            elif 'forbidden' in details.lower() or 'blocked' in details.lower():
+                raise ValueError(
+                    "YouTube API key is blocked or restricted. "
+                    "Please create a new API key at https://console.cloud.google.com "
+                    "and update YOUTUBE_API_KEY in your .env file."
+                )
+            else:
+                raise ValueError(f"YouTube API access denied (403): {_sanitize_error(details[:200])}")
+        elif status == 404:
+            raise ValueError("Video not found, or comments are disabled for this video.")
+        else:
+            raise
+    except Exception:
+        raise
+
     if not comments_data:
         return {
             'video_id': video_id,
@@ -494,7 +573,7 @@ def analyze_youtube_video(video_url: str, max_comments: int = 200) -> dict:
             'like_count': video_details.get('like_count', 0),
             'comment_count': video_details.get('comment_count', 0),
             'total_comments_fetched': 0,
-            'error': 'No comments found or comments disabled'
+            'error': 'No comments found or comments are disabled for this video.'
         }
 
     
@@ -638,7 +717,7 @@ def youtube_analyze():
         logger.error(f"YouTube API error: {e}")
         error_reason = e.resp.reason if hasattr(e, 'resp') else 'Unknown'
         error_details = e.error_details if hasattr(e, 'error_details') and e.error_details else []
-        detail_msg = error_details[0].get('message', '') if error_details else str(e)
+        detail_msg = error_details[0].get('message', '') if error_details else _sanitize_error(str(e))
         
         if 'blocked' in detail_msg.lower() or error_reason == 'forbidden':
             user_msg = "YouTube API access is blocked. Please check your API key restrictions in Google Cloud Console."
@@ -647,7 +726,7 @@ def youtube_analyze():
         elif 'notFound' in detail_msg:
             user_msg = "Video not found or comments are disabled."
         else:
-            user_msg = f"YouTube API Error ({error_reason}): {detail_msg}"
+            user_msg = f"YouTube API Error ({error_reason}): {_sanitize_error(detail_msg)}"
         
         model_info = get_model_info()
         return render_template(
@@ -660,7 +739,7 @@ def youtube_analyze():
         import traceback
         logger.error(f"YouTube analysis error: {type(e).__name__}: {e}")
         logger.error(traceback.format_exc())
-        user_msg = f"Analysis error ({type(e).__name__}): {str(e)[:200]}"
+        user_msg = f"Analysis error ({type(e).__name__}): {_sanitize_error(str(e)[:200])}"
         model_info = get_model_info()
         return render_template(
             'index.html',
@@ -688,7 +767,7 @@ def api_youtube_analyze():
         result = analyze_youtube_video(video_url, max_comments=200)
         return {'success': True, **result}
     except Exception as e:
-        return {'error': str(e)}, 500
+        return {'error': _sanitize_error(str(e))}, 500
 
 
 @app.route('/clear-history', methods=['POST'])
@@ -720,9 +799,9 @@ if __name__ == '__main__':
     logger.info("Starting Sentiment Analysis Flask App...")
     logger.info(f"Project root: {project_root}")
     
-    # HF Spaces port/env (override defaults)
-    host = os.environ.get('FLASK_HOST', '0.0.0.0')
-    port = int(os.environ.get('FLASK_PORT', '7860'))
+    # Use the port from .env (defaults to 5000 for local, 7860 for HF Spaces)
+    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    port = int(os.environ.get('FLASK_PORT', '5000'))
     
     logger.info(f"Starting Sentiment Analysis Flask App on {host}:{port}...")
     logger.info(f"Debug mode: {app.config['DEBUG']}")
@@ -732,4 +811,6 @@ if __name__ == '__main__':
         port=port,
         debug=app.config['DEBUG']
     )
+
+
 
