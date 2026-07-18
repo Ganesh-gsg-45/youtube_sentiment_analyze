@@ -5,7 +5,6 @@ import {
     createUserWithEmailAndPassword,
     signOut,
     GoogleAuthProvider,
-    GithubAuthProvider,
     signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
@@ -15,11 +14,6 @@ const FB_COOKIE_NAME = "fb_id_token";
 // Google provider
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
-
-// GitHub provider
-const githubProvider = new GithubAuthProvider();
-githubProvider.addScope('read:user');
-githubProvider.addScope('user:email');
 
 /**
  * Save user profile to Firestore after any OAuth sign-in
@@ -118,17 +112,5 @@ export async function googleLogin() {
     await saveUserProfile(result.user, 'google.com');
     await setSessionCookie(result.user);
     console.log("Google sign-in successful:", result.user.email);
-    return result;
-}
-
-/**
- * Sign in with GitHub via popup. See googleLogin() for why popup, not redirect.
- * @returns {Promise<import('firebase/auth').UserCredential>}
- */
-export async function githubLogin() {
-    const result = await signInWithPopup(auth, githubProvider);
-    await saveUserProfile(result.user, 'github.com');
-    await setSessionCookie(result.user);
-    console.log("GitHub sign-in successful:", result.user.email);
     return result;
 }

@@ -83,23 +83,25 @@
                         required minlength="6" autocomplete="new-password">
                 </div>
                 <button type="submit"
-                    class="w-full py-4 bg-gradient-to-r from-brand to-brand2 text-white font-bold rounded-xl hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg shadow-brand/25">
+                    class="w-full py-4 bg-white/10 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-slate-700 dark:text-white font-semibold rounded-xl hover:bg-white/20 dark:hover:bg-white/10 hover:scale-[1.01] transition-all">
                     Create Account
                 </button>
             </form>
 
             <div class="divider">or</div>
 
-            <button type="button" id="googleSignupBtn" class="google-btn">
-                <i class="fab fa-google"></i> Continue with Google
-            </button>
-
-            <button type="button" id="githubSignupBtn"
-                style="width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:13px 20px; margin-top:10px; background:#24292e; border:1px solid rgba(255,255,255,0.12); border-radius:12px; color:#fff; font-size:0.95rem; font-weight:600; cursor:pointer; transition:all 0.25s; box-shadow:0 2px 8px rgba(0,0,0,0.3);"
-                onmouseover="this.style.background='#2f363d'; this.style.transform='scale(1.02)';"
-                onmouseout="this.style.background='#24292e'; this.style.transform='scale(1)';"
+            <button type="button" id="googleSignupBtn"
+                style="width:100%; display:flex; align-items:center; justify-content:center; gap:12px; padding:16px 20px; background:linear-gradient(90deg, var(--brand, #6366f1), var(--brand2, #a855f7)); border:none; border-radius:12px; color:#fff; font-size:1.05rem; font-weight:700; cursor:pointer; transition:all 0.25s; box-shadow:0 4px 16px rgba(99,102,241,0.35);"
+                onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 6px 20px rgba(99,102,241,0.45)';"
+                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 16px rgba(99,102,241,0.35)';"
             >
-                <i class="fab fa-github" style="font-size:1.1rem;"></i> Continue with GitHub
+                <svg width="22" height="22" viewBox="0 0 48 48" style="flex-shrink:0;">
+                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.2-.1-2.4-.4-3.5z"/>
+                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3c-7.4 0-13.8 4.1-17.7 10.1z"/>
+                    <path fill="#4CAF50" d="M24 45c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4c-2 1.4-4.6 2.2-7.6 2.2-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C9.9 40.7 16.4 45 24 45z"/>
+                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.6 5.4C41.9 35.9 45 30.5 45 24c0-1.2-.1-2.4-.4-3.5z"/>
+                </svg>
+                Continue with Google
             </button>
 
             <div class="mt-8 pt-6 border-t border-white/10 text-center">
@@ -118,7 +120,7 @@
     <script type="module">
         import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=8";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-        import { signupUser, googleLogin, githubLogin, setSessionCookie } from "{{ url_for('static', filename='js/auth.js') }}?v=8";
+        import { signupUser, googleLogin, setSessionCookie } from "{{ url_for('static', filename='js/auth.js') }}?v=9";
 
         const authMessage = document.createElement('div');
         authMessage.id = 'authMessage';
@@ -184,30 +186,6 @@
                     showError('Your browser blocked the sign-in popup. Please allow popups for this site and try again.');
                 } else {
                     showError(err?.message || 'Google sign-in failed. Please try again.');
-                }
-            } finally {
-                btn.disabled = false;
-            }
-        });
-
-        // ---- GitHub OAuth (popup) ----
-        document.getElementById('githubSignupBtn').addEventListener('click', async (e) => {
-            hideError();
-            const btn = e.currentTarget;
-            btn.disabled = true;
-            try {
-                await githubLogin();
-                window.location.href = '/';
-            } catch (err) {
-                console.error('GitHub Signup Error:', err?.code, err?.message);
-                if (err?.code === 'auth/popup-closed-by-user') {
-                    // no-op
-                } else if (err?.code === 'auth/popup-blocked') {
-                    showError('Your browser blocked the sign-in popup. Please allow popups for this site and try again.');
-                } else if (err?.code === 'auth/account-exists-with-different-credential') {
-                    showError('An account already exists with this email using a different sign-in method.');
-                } else {
-                    showError(err?.message || 'GitHub sign-in failed. Make sure GitHub is enabled in Firebase Console.');
                 }
             } finally {
                 btn.disabled = false;
