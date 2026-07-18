@@ -44,9 +44,7 @@ app = Flask(__name__)
 FB_ID_TOKEN_COOKIE = "fb_id_token"
 _firebase_admin_app = None
 
-
 def _init_firebase_admin():
-    """Initialize Firebase Admin once using the service account JSON in this repo."""
     global _firebase_admin_app
     if _firebase_admin_app is not None:
         return _firebase_admin_app
@@ -55,11 +53,17 @@ def _init_firebase_admin():
         import firebase_admin
         from firebase_admin import credentials
 
-        service_account_path = os.environ.get(
-            "GOOGLE_APPLICATION_CREDENTIALS",
-            str(project_root / "sentimentscope-ced63-firebase-adminsdk-fbsvc-f54b1903d1.json"),
-        )
-        cred = credentials.Certificate(service_account_path)
+        cred_json_str = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+        if cred_json_str:
+            cred_dict = json.loads(cred_json_str)
+            cred = credentials.Certificate(cred_dict)
+        else:
+            service_account_path = os.environ.get(
+                "GOOGLE_APPLICATION_CREDENTIALS",
+                str(project_root / "sentimentscope-ced63-firebase-adminsdk-fbsvc-f54b1903d1.json"),
+            )
+            cred = credentials.Certificate(service_account_path)
+
         _firebase_admin_app = firebase_admin.initialize_app(cred)
     except Exception as e:
         logger.warning(f"Firebase Admin init failed: {e}")
