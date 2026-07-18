@@ -6,10 +6,11 @@ import {
     signOut,
     GoogleAuthProvider,
     GithubAuthProvider,
-    signInWithRedirect,
-    getRedirectResult
+    signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+const FB_COOKIE_NAME = "fb_id_token";
 
 // Google provider
 const googleProvider = new GoogleAuthProvider();
@@ -39,13 +40,44 @@ async function saveUserProfile(user, providerHint) {
 }
 
 /**
+ * Write the Firebase ID token into a cookie the Flask backend can read.
+ * Called immediately after every successful sign-in, BEFORE redirecting,
+ * so the very next server request (to "/") is already authenticated —
+ * we don't rely on onIdTokenChanged firing first on the next page.
+ * @param {import('firebase/auth').User} user
+ */
+export async function setSessionCookie(user) {
+    const token = await user.getIdToken();
+    // Not HttpOnly (JS needs to set/clear it) — SameSite=Lax is fine since
+    // this is same-site navigation (login page -> app, both on the same origin).
+    // Secure only works over HTTPS — browsers silently DROP the cookie if you
+    // set Secure on plain http:// (e.g. local dev on 127.0.0.1:5000), which
+    // causes an infinite login<->redirect loop. Only add it when actually on HTTPS.
+    const isHttps = window.location.protocol === "https:";
+    let cookie = `${FB_COOKIE_NAME}=${token}; path=/; max-age=3600; SameSite=Lax`;
+    if (isHttps) cookie += "; Secure";
+    document.cookie = cookie;
+}
+
+/**
+ * Clear the session cookie (called on logout).
+ */
+export function clearSessionCookie() {
+    const isHttps = window.location.protocol === "https:";
+    let cookie = `${FB_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
+    if (isHttps) cookie += "; Secure";
+    document.cookie = cookie;
+}
+
+/**
  * Log in an existing user with email/password
  * @param {string} email
  * @param {string} password
  */
 export async function loginUser(email, password) {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log("Logged in:", userCredential.user);
+    await setSessionCookie(userCredential.user);
+    console.log("Logged in:", userCredential.user.email);
     return userCredential;
 }
 
@@ -56,7 +88,8 @@ export async function loginUser(email, password) {
  */
 export async function signupUser(email, password) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    console.log("Signed up:", userCredential.user);
+    await setSessionCookie(userCredential.user);
+    console.log("Signed up:", userCredential.user.email);
     return userCredential;
 }
 
@@ -64,46 +97,38 @@ export async function signupUser(email, password) {
  * Log out the current user
  */
 export async function logoutUser() {
+    clearSessionCookie();
     await signOut(auth);
     console.log("Logged out");
     window.location.href = "/login";
 }
 
 /**
- * Sign in with Google via redirect (avoids popup-blocked errors).
- * The browser navigates to Google, then returns to the same page.
- * Call handleRedirectResult() on page load to capture the sign-in result.
+ * Sign in with Google via popup.
+ * Popup is used instead of redirect because the redirect flow requires
+ * cross-domain storage between this app's domain (hf.space) and Firebase's
+ * authDomain (firebaseapp.com) — browsers increasingly block that as
+ * third-party storage, which silently breaks the redirect round-trip.
+ * Popup communicates the result back via postMessage instead, which isn't
+ * affected by that restriction.
+ * @returns {Promise<import('firebase/auth').UserCredential>}
  */
 export async function googleLogin() {
-    await signInWithRedirect(auth, googleProvider);
-    // Page navigates away — nothing executes after this
+    const result = await signInWithPopup(auth, googleProvider);
+    await saveUserProfile(result.user, 'google.com');
+    await setSessionCookie(result.user);
+    console.log("Google sign-in successful:", result.user.email);
+    return result;
 }
 
 /**
- * Sign in with GitHub via redirect (avoids popup-blocked errors).
+ * Sign in with GitHub via popup. See googleLogin() for why popup, not redirect.
+ * @returns {Promise<import('firebase/auth').UserCredential>}
  */
 export async function githubLogin() {
-    await signInWithRedirect(auth, githubProvider);
-    // Page navigates away — nothing executes after this
-}
-
-/**
- * Call this on every page load BEFORE setting up onAuthStateChanged.
- * Captures the OAuth credential after the browser returns from the redirect.
- * @returns {Promise<import('firebase/auth').UserCredential | null>}
- */
-export async function handleRedirectResult() {
-    try {
-        const result = await getRedirectResult(auth);
-        if (result && result.user) {
-            const provider = result.providerId || result.user.providerData?.[0]?.providerId || 'oauth';
-            await saveUserProfile(result.user, provider);
-            console.log("OAuth redirect sign-in successful:", result.user.email);
-            return result;
-        }
-        return null;
-    } catch (err) {
-        console.error("OAuth redirect result error:", err?.code, err?.message);
-        throw err;
-    }
+    const result = await signInWithPopup(auth, githubProvider);
+    await saveUserProfile(result.user, 'github.com');
+    await setSessionCookie(result.user);
+    console.log("GitHub sign-in successful:", result.user.email);
+    return result;
 }

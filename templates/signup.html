@@ -116,9 +116,9 @@
     </div>
 
     <script type="module">
-        import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=7";
+        import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=8";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-        import { signupUser, googleLogin, githubLogin, handleRedirectResult } from "{{ url_for('static', filename='js/auth.js') }}?v=7";
+        import { signupUser, googleLogin, githubLogin, setSessionCookie } from "{{ url_for('static', filename='js/auth.js') }}?v=8";
 
         const authMessage = document.createElement('div');
         authMessage.id = 'authMessage';
@@ -134,21 +134,10 @@
             authMessage.classList.add('hidden');
         }
 
-        // ---- Capture OAuth redirect result on page load ----
-        try {
-            const redirectResult = await handleRedirectResult();
-            if (redirectResult && redirectResult.user) {
-                window.location.href = '/';
-            }
-        } catch (err) {
-            if (err?.code && err.code !== 'auth/no-auth-event') {
-                showError('OAuth sign-in failed: ' + (err?.message || err));
-            }
-        }
-
         // ---- If already logged in, go to dashboard ----
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
+                await setSessionCookie(user);
                 window.location.href = '/';
             }
         });
@@ -179,25 +168,49 @@
             }
         });
 
-        // ---- Google OAuth (redirect, no popup) ----
-        document.getElementById('googleSignupBtn').addEventListener('click', async () => {
+        // ---- Google OAuth (popup) ----
+        document.getElementById('googleSignupBtn').addEventListener('click', async (e) => {
             hideError();
+            const btn = e.currentTarget;
+            btn.disabled = true;
             try {
-                await googleLogin(); // Redirects to Google
+                await googleLogin();
+                window.location.href = '/';
             } catch (err) {
-                console.error('Google Signup Error:', err);
-                showError(err?.message || 'Google sign-in failed. Please try again.');
+                console.error('Google Signup Error:', err?.code, err?.message);
+                if (err?.code === 'auth/popup-closed-by-user') {
+                    // no-op
+                } else if (err?.code === 'auth/popup-blocked') {
+                    showError('Your browser blocked the sign-in popup. Please allow popups for this site and try again.');
+                } else {
+                    showError(err?.message || 'Google sign-in failed. Please try again.');
+                }
+            } finally {
+                btn.disabled = false;
             }
         });
 
-        // ---- GitHub OAuth (redirect, no popup) ----
-        document.getElementById('githubSignupBtn').addEventListener('click', async () => {
+        // ---- GitHub OAuth (popup) ----
+        document.getElementById('githubSignupBtn').addEventListener('click', async (e) => {
             hideError();
+            const btn = e.currentTarget;
+            btn.disabled = true;
             try {
-                await githubLogin(); // Redirects to GitHub
+                await githubLogin();
+                window.location.href = '/';
             } catch (err) {
-                console.error('GitHub Signup Error:', err);
-                showError(err?.message || 'GitHub sign-in failed. Make sure GitHub is enabled in Firebase Console.');
+                console.error('GitHub Signup Error:', err?.code, err?.message);
+                if (err?.code === 'auth/popup-closed-by-user') {
+                    // no-op
+                } else if (err?.code === 'auth/popup-blocked') {
+                    showError('Your browser blocked the sign-in popup. Please allow popups for this site and try again.');
+                } else if (err?.code === 'auth/account-exists-with-different-credential') {
+                    showError('An account already exists with this email using a different sign-in method.');
+                } else {
+                    showError(err?.message || 'GitHub sign-in failed. Make sure GitHub is enabled in Firebase Console.');
+                }
+            } finally {
+                btn.disabled = false;
             }
         });
 

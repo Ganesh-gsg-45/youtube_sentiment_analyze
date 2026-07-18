@@ -115,9 +115,9 @@
     </div>
 
     <script type="module">
-        import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=7";
+        import { auth } from "{{ url_for('static', filename='js/firebase.js') }}?v=8";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-        import { loginUser, googleLogin, githubLogin, handleRedirectResult } from "{{ url_for('static', filename='js/auth.js') }}?v=7";
+        import { loginUser, googleLogin, githubLogin, setSessionCookie } from "{{ url_for('static', filename='js/auth.js') }}?v=8";
 
         // ---- Error message element ----
         const authMessage = document.createElement('div');
@@ -134,24 +134,11 @@
             authMessage.classList.add('hidden');
         }
 
-        // ---- Step 1: Capture any OAuth redirect result FIRST ----
-        // (Runs when Google/GitHub sends the user back after redirect login)
-        try {
-            const redirectResult = await handleRedirectResult();
-            if (redirectResult && redirectResult.user) {
-                // Successfully signed in via redirect — go to dashboard
-                window.location.href = '/';
-            }
-        } catch (err) {
-            // Only show if it's a real error, not just "no redirect result"
-            if (err?.code && err.code !== 'auth/no-auth-event') {
-                showError('OAuth sign-in failed: ' + (err?.message || err));
-            }
-        }
-
-        // ---- Step 2: If already logged in, go straight to dashboard ----
-        onAuthStateChanged(auth, (user) => {
+        // ---- If already logged in (valid session), go straight to dashboard ----
+        // Also re-syncs the cookie in case it expired but the Firebase session is still alive.
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
+                await setSessionCookie(user);
                 window.location.href = '/';
             }
         });
@@ -163,6 +150,9 @@
             const formData = new FormData(e.target);
             const email = formData.get('email');
             const password = formData.get('password');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Signing in...';
             try {
                 await loginUser(email, password);
                 window.location.href = '/';
@@ -170,32 +160,58 @@
                 console.error('Login Error:', err);
                 let msg = 'Login failed. Please check your credentials.';
                 if (err?.code === 'auth/user-not-found') msg = 'No account found with this email.';
-                else if (err?.code === 'auth/wrong-password') msg = 'Incorrect password.';
+                else if (err?.code === 'auth/wrong-password' || err?.code === 'auth/invalid-credential') msg = 'Incorrect email or password.';
                 else if (err?.code === 'auth/too-many-requests') msg = 'Too many failed attempts. Try again later.';
                 else if (err?.message) msg = err.message;
                 showError(msg);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
             }
         });
 
-        // ---- Google OAuth (redirect, no popup) ----
-        document.getElementById('googleLoginBtn').addEventListener('click', async () => {
+        // ---- Google OAuth (popup) ----
+        document.getElementById('googleLoginBtn').addEventListener('click', async (e) => {
             hideError();
+            const btn = e.currentTarget;
+            btn.disabled = true;
             try {
-                await googleLogin(); // Redirects to Google — page navigates away
+                await googleLogin();
+                window.location.href = '/';
             } catch (err) {
-                console.error('Google Login Error:', err);
-                showError(err?.message || 'Google sign-in failed. Please try again.');
+                console.error('Google Login Error:', err?.code, err?.message);
+                if (err?.code === 'auth/popup-closed-by-user') {
+                    // User closed the popup — not a real error, just reset silently.
+                } else if (err?.code === 'auth/popup-blocked') {
+                    showError('Your browser blocked the sign-in popup. Please allow popups for this site and try again.');
+                } else {
+                    showError(err?.message || 'Google sign-in failed. Please try again.');
+                }
+            } finally {
+                btn.disabled = false;
             }
         });
 
-        // ---- GitHub OAuth (redirect, no popup) ----
-        document.getElementById('githubLoginBtn').addEventListener('click', async () => {
+        // ---- GitHub OAuth (popup) ----
+        document.getElementById('githubLoginBtn').addEventListener('click', async (e) => {
             hideError();
+            const btn = e.currentTarget;
+            btn.disabled = true;
             try {
-                await githubLogin(); // Redirects to GitHub — page navigates away
+                await githubLogin();
+                window.location.href = '/';
             } catch (err) {
-                console.error('GitHub Login Error:', err);
-                showError(err?.message || 'GitHub sign-in failed. Make sure GitHub is enabled in Firebase Console.');
+                console.error('GitHub Login Error:', err?.code, err?.message);
+                if (err?.code === 'auth/popup-closed-by-user') {
+                    // User closed the popup — not a real error, just reset silently.
+                } else if (err?.code === 'auth/popup-blocked') {
+                    showError('Your browser blocked the sign-in popup. Please allow popups for this site and try again.');
+                } else if (err?.code === 'auth/account-exists-with-different-credential') {
+                    showError('An account already exists with this email using a different sign-in method.');
+                } else {
+                    showError(err?.message || 'GitHub sign-in failed. Make sure GitHub is enabled in Firebase Console.');
+                }
+            } finally {
+                btn.disabled = false;
             }
         });
 
