@@ -11,7 +11,7 @@
     <meta name="description"
         content="Analyze YouTube video comment sentiment with AI-powered natural language processing. Get pie charts, trend analysis, keyword clouds, and audience scores.">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
@@ -54,26 +54,6 @@
             transition: opacity 0.3s;
         }
     </style>
-    {% if result %}
-    <!-- Switch to text tab immediately, before Firebase resolves, to prevent flash -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Force text tab active if result exists (set by Flask)
-            var ct = document.getElementById('content-text');
-            var cv = document.getElementById('content-video');
-            var ht = document.getElementById('hero-text');
-            var hv = document.getElementById('hero-video');
-            var tb = document.getElementById('main-tab-text');
-            var vb = document.getElementById('main-tab-video');
-            if (ct) { ct.classList.remove('hidden'); }
-            if (cv) { cv.classList.add('hidden'); }
-            if (ht) { ht.classList.remove('hidden'); }
-            if (hv) { hv.classList.add('hidden'); }
-            if (tb) { tb.classList.add('active'); }
-            if (vb) { vb.classList.remove('active'); }
-        });
-    </script>
-    {% endif %}
 </head>
 
 <body
@@ -463,6 +443,8 @@
             </div>
             {% endif %}
 
+        </div><!-- /#content-video -->
+
         <!-- ==================== TEXT ANALYSIS RESULTS ==================== -->
         <div id="content-text" class="tab-content hidden">
             <!-- AJAX result renders here -->
@@ -518,8 +500,7 @@
                             item.text|length > 80 %}…{% endif %}</div>
                         <div class="flex items-center gap-2 flex-shrink-0">
                             <span
-                                class="px-2.5 py-1 rounded-full text-xs font-bold {% if item.sentiment == 'Positive' %}bg-pos/15 text-pos{% elif item.sentiment == 'Negative' %}bg-neg/15 text-neg{% else %}bg-neu/15 text-neu{% endif %}"{{
-                                item.sentiment }}</span>
+                                class="px-2.5 py-1 rounded-full text-xs font-bold {% if item.sentiment == 'Positive' %}bg-pos/15 text-pos{% elif item.sentiment == 'Negative' %}bg-neg/15 text-neg{% else %}bg-neu/15 text-neu{% endif %}">{{ item.sentiment }}</span>
                             <span class="text-xs text-slate-500">{{ "%.0f"|format(item.confidence * 100) }}%</span>
                         </div>
                     </div>
@@ -529,7 +510,7 @@
                     {% endif %}
                 </div>
             </section>
-        </div>
+        </div><!-- /#content-text -->
 
 
         <!-- ==================== MODEL INFO (Collapsible) ==================== -->
@@ -600,7 +581,7 @@
     </script>
     {% endif %}
 
-    <script src="{{ url_for('static', filename='js/script.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=4"></script>
     <script type="module">
         import { logoutUser } from "{{ url_for('static', filename='js/auth.js') }}";
         document.getElementById('logoutBtn').addEventListener('click', logoutUser);

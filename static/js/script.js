@@ -126,13 +126,13 @@ async function runTextAnalysis() {
             const sentCls = data.sentiment === 'Positive' ? 'bg-pos/15 text-pos'
                           : data.sentiment === 'Negative' ? 'bg-neg/15 text-neg'
                           : 'bg-neu/15 text-neu';
-            const shortened = text.length > 80 ? text.slice(0, 80) + '…' : text;
+            const shortened = escHtml(text.length > 80 ? text.slice(0, 80) + '\u2026' : text);
             const item = document.createElement('div');
             item.className = `history-item sentiment-${data.sentiment.toLowerCase()}`;
             item.innerHTML = `
                 <div class="text-sm text-slate-300 flex-1 min-w-0 truncate">${shortened}</div>
                 <div class="flex items-center gap-2 flex-shrink-0">
-                    <span class="px-2.5 py-1 rounded-full text-xs font-bold ${sentCls}">${data.sentiment}</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-bold ${sentCls}">${escHtml(data.sentiment)}</span>
                     <span class="text-xs text-slate-500">${pct}%</span>
                 </div>`;
             historyList.prepend(item);
@@ -163,27 +163,37 @@ function clearForm() {
 
 
 // ----------------------------------------------------------------
-// YOUTUBE FORM — LOADING STATE
-// ----------------------------------------------------------------
-const youtubeForm = document.getElementById('youtubeForm');
-const youtubeLoading = document.getElementById('youtubeLoading');
-const ytSubmitBtn = document.getElementById('ytSubmitBtn');
-
-if (youtubeForm) {
-    youtubeForm.addEventListener('submit', function () {
-        if (youtubeLoading) youtubeLoading.classList.remove('hidden');
-        if (ytSubmitBtn) {
-            ytSubmitBtn.disabled = true;
-            ytSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching…';
-        }
-    });
-}
-
-// ----------------------------------------------------------------
-// ANIMATE PROGRESS BARS ON LOAD
+// SINGLE DOMContentLoaded — all DOM-dependent init runs here
 // ----------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
-    // Char counter for text textarea
+
+    // ── YouTube form loading state ───────────────────────────────
+    const youtubeForm    = document.getElementById('youtubeForm');
+    const youtubeLoading = document.getElementById('youtubeLoading');
+    const ytSubmitBtn    = document.getElementById('ytSubmitBtn');
+
+    if (youtubeForm) {
+        youtubeForm.addEventListener('submit', function () {
+            if (youtubeLoading) youtubeLoading.classList.remove('hidden');
+            if (ytSubmitBtn) {
+                ytSubmitBtn.disabled = true;
+                ytSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching…';
+            }
+        });
+    }
+
+    // Re-enable submit button when user navigates back (bfcache restore)
+    window.addEventListener('pageshow', function (e) {
+        if (e.persisted) {
+            if (ytSubmitBtn) {
+                ytSubmitBtn.disabled = false;
+                ytSubmitBtn.innerHTML = '<i class="fab fa-youtube mr-2"></i> Analyze';
+            }
+            if (youtubeLoading) youtubeLoading.classList.add('hidden');
+        }
+    });
+
+    // ── Char counter for textarea ────────────────────────────────
     const ta = document.getElementById('inputText');
     const cc = document.getElementById('charCount');
     if (ta && cc) {
@@ -198,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Animate progress bars on load
+    // ── Animate progress bars on load ───────────────────────────
     document.querySelectorAll('.progress-fill, .score-bar-fill').forEach(el => {
         const w = el.style.width;
         el.style.width = '0%';
@@ -413,7 +423,7 @@ function renderComments() {
 
     if (slice.length === 0) {
         container.innerHTML = '<p class="text-slate-500 text-center py-5">No comments in this category.</p>';
-        pagination.innerHTML = '';
+        if (pagination) pagination.innerHTML = '';
         return;
     }
 
@@ -439,7 +449,7 @@ function renderComments() {
     }).join('');
 
     // Render pagination
-    if (totalPages <= 1) { pagination.innerHTML = ''; return; }
+    if (totalPages <= 1) { if (pagination) pagination.innerHTML = ''; return; }
 
     let pages = '';
     // Prev
@@ -475,46 +485,46 @@ function goPage(n) {
 function escHtml(str) {
     return String(str)
         .replace(/&/g, '&amp;')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"');
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // ----------------------------------------------------------------
-// INITIALISE EVERYTHING ON DOMContentLoaded
+// YOUTUBE RESULTS + CHART INIT
 // ----------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
 
-    // Auto-switch to text tab if text result is present
+    // Auto-switch to text tab if result section is already visible
     const resultSection = document.getElementById('resultSection');
     if (resultSection && !resultSection.classList.contains('hidden')) {
         switchMainTab('text');
-        // Scroll to result so user sees it immediately
         setTimeout(() => resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
     }
 
-    // Only run if YouTube result data exists
+    // Only run chart/comment init if YouTube result data was injected
     if (typeof YT_DATA === 'undefined') return;
 
-    // Panel 3 — Donut chart
+    // Donut chart
     renderDonutChart(YT_DATA.donut.positive, YT_DATA.donut.negative, YT_DATA.donut.neutral);
 
-    // Panel 4 — Trend chart
+    // Trend chart
     if (YT_DATA.trend && YT_DATA.trend.labels && YT_DATA.trend.labels.length > 1) {
         renderTrendChart(YT_DATA.trend);
     }
 
-    // Panel 7 — Comments
+    // Comments panel
     allComments = YT_DATA.comments || [];
     filteredComments = allComments;
     renderComments();
 
-    // Panel 8 — Score gauge
+    // Score gauge
     if (YT_DATA.score) {
         animateScoreGauge(YT_DATA.score.value, YT_DATA.score.color);
     }
 
-    // Scroll smoothly to results if we just got results
+    // Scroll to video info panel
     const panelInfo = document.getElementById('panelVideoInfo');
     if (panelInfo) {
         setTimeout(() => panelInfo.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);

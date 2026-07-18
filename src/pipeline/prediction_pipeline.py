@@ -172,15 +172,7 @@ class PredictionPipeline:
 
 
     def preprocess_text(self, text: str) -> str:
-        """
-        Apply the same text preprocessing as used during training.
-        
-        Args:
-            text: Raw input text.
-            
-        Returns:
-            Preprocessed text string.
-        """
+       
         if not text or not isinstance(text, str):
             return ""
         
@@ -211,33 +203,69 @@ class PredictionPipeline:
         return text
 
     def predict(self, text: Union[str, List[str]]) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
-        """
-        Make sentiment prediction on input text(s).
-        
-        Args:
-            text: Single text string or list of text strings.
-            
-        Returns:
-            For single text: Dictionary with prediction results.
-            For list: List of prediction result dictionaries.
-        """
+    
         # Handle single text
         if isinstance(text, str):
             return self._predict_single(text)
         
-        # Handle batch
-        return [self._predict_single(t) for t in text]
+        # Handle batch — vectorize the whole batch in one transform() call
+        return self._predict_batch(text)
+
+    def _predict_batch(self, texts: List[str]) -> List[Dict[str, Any]]:
+        """
+        Efficiently predict sentiment for a batch of texts.
+        Vectorizes all valid texts in a single transform() call instead of one per text.
+
+        Args:
+            texts: List of raw text strings.
+
+        Returns:
+            List of prediction result dictionaries (same order as input).
+        """
+        processed = [self.preprocess_text(t) for t in texts]
+        valid_indices = [i for i, p in enumerate(processed) if p]
+
+        # Pre-fill results with the "empty input" sentinel
+        results: List[Dict[str, Any]] = [
+            {
+                'text': texts[i],
+                'processed_text': '',
+                'predicted_label': None,
+                'sentiment': 'Unknown',
+                'confidence': None
+            }
+            for i in range(len(texts))
+        ]
+
+        if not valid_indices:
+            return results
+
+        # Single batch transform
+        valid_processed = [processed[i] for i in valid_indices]
+        features = self.vectorizer.transform(valid_processed)
+
+        preds_mapped = [int(v) for v in self.model.predict(features)]
+        classes = list(self.model.classes_)
+
+        for idx, pred_mapped in zip(valid_indices, preds_mapped):
+            pred_original = self.inverse_label_map.get(pred_mapped, 0)
+            sentiment = self.sentiment_labels.get(pred_original, 'Neutral')
+            # Slice the single-row feature for confidence computation
+            pos = valid_indices.index(idx)  # row position inside features
+            row_features = features[pos]
+            confidence = self._get_confidence(row_features, pred_mapped)
+            results[idx] = {
+                'text': texts[idx],
+                'processed_text': processed[idx],
+                'predicted_label': pred_original,
+                'sentiment': sentiment,
+                'confidence': confidence
+            }
+
+        return results
 
     def _predict_single(self, text: str) -> Dict[str, Any]:
-        """
-        Make prediction on a single text.
-        
-        Args:
-            text: Input text string.
-            
-        Returns:
-            Dictionary with prediction results.
-        """
+  
         # Preprocess
         processed_text = self.preprocess_text(text)
         
@@ -253,10 +281,10 @@ class PredictionPipeline:
         # Vectorize
         features = self.vectorizer.transform([processed_text])
         
-        # Predict
+        # Predict — use .get() to guard against unexpected class values
         pred_mapped = int(self.model.predict(features)[0])
-        pred_original = self.inverse_label_map[pred_mapped]
-        sentiment = self.sentiment_labels[pred_original]
+        pred_original = self.inverse_label_map.get(pred_mapped, 0)  # default → Neutral
+        sentiment = self.sentiment_labels.get(pred_original, 'Neutral')
         
         # Get confidence if available
         confidence = self._get_confidence(features, pred_mapped)
@@ -270,21 +298,15 @@ class PredictionPipeline:
         }
 
     def _get_confidence(self, features, pred_mapped: int) -> float:
-        """
-        Get prediction confidence if model supports it.
-        
-        Args:
-            features: Vectorized features.
-            pred_mapped: Mapped prediction label.
-            
-        Returns:
-            Confidence score or None.
-        """
+    
         try:
             # Try predict_proba (LogisticRegression, RandomForest, NaiveBayes, XGBoost)
             if hasattr(self.model, 'predict_proba'):
                 proba = self.model.predict_proba(features)[0]
-                confidence = float(proba[pred_mapped])
+                # Index by position in classes_, not by label value
+                classes = list(self.model.classes_)
+                class_idx = classes.index(pred_mapped) if pred_mapped in classes else 0
+                confidence = float(proba[class_idx])
                 return round(confidence, 4)
         except Exception:
             pass
@@ -296,7 +318,10 @@ class PredictionPipeline:
                 # Convert to confidence-like score using softmax
                 exp_scores = np.exp(decision - np.max(decision))
                 proba = exp_scores / exp_scores.sum()
-                confidence = float(proba[pred_mapped])
+                # Index by position in classes_, not by label value
+                classes = list(self.model.classes_)
+                class_idx = classes.index(pred_mapped) if pred_mapped in classes else 0
+                confidence = float(proba[class_idx])
                 return round(confidence, 4)
         except Exception:
             pass

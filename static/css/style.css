@@ -174,21 +174,21 @@ html {
   border-color: var(--glass-border-hover);
 }
 
-align-items: center;
-gap: 8px;
-padding: 12px 28px;
-background: linear-gradient(135deg, var(--brand), var(--brand2));
-border: none;
-border-radius: 12px;
-color: #fff;
-font-size: 0.97rem;
-font-weight: 700;
-font-family: 'Inter',
-sans-serif;
-cursor: pointer;
-box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
-transition: opacity 0.2s,
-transform 0.15s;
+.btn-analyze-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.97rem;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+  transition: opacity 0.2s, transform 0.15s;
 }
 
 .btn-analyze-text:hover {
@@ -294,38 +294,7 @@ transform 0.15s;
   }
 }
 
-/* ── ANIMATIONS ──────────────────────────────────────────── */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.6s ease-out both;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.6s ease-out both;
-}
+/* ── ANIMATIONS (defined once above — no duplicates) ─────── */
 
 /* ── KPI CARDS ───────────────────────────────────────────── */
 .kpi-grid {
@@ -634,25 +603,7 @@ transform 0.15s;
 }
 
 /* ── SPACE UTILITIES ─────────────────────────────────────── */
-.mb-6 {
-  margin-bottom: 24px;
-}
-
-.mb-8 {
-  margin-bottom: 32px;
-}
-
-.mb-4 {
-  margin-bottom: 16px;
-}
-
-.mt-4 {
-  margin-top: 16px;
-}
-
-.space-y-6>*+* {
-  margin-top: 24px;
-}
+/* Tailwind handles spacing utilities — no overrides needed here. */
 
 /* ── RESULT SECTION ANIMATIONS ───────────────────────────── */
 .result-section {
