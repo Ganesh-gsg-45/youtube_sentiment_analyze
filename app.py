@@ -94,11 +94,8 @@ def verify_firebase_id_token():
         logger.info(f"Firebase ID token verification failed: {type(e).__name__}: {e}")
         return None
 
-
 def _is_protected_route():
-    # Protect UI + sensitive API endpoints that return injected analysis data.
     protected_prefixes = (
-        "/",
         "/predict",
         "/youtube-analyze",
         "/api/predict",
@@ -106,12 +103,10 @@ def _is_protected_route():
         "/history",
         "/clear-history",
     )
-
-    # Use prefix matching to avoid accidental bypass due to minor path variants.
-    # '/' must be treated as a special case (everything is '/...' so protect it explicitly)
     if request.path == "/":
         return True
-
+    if request.path.startswith("/static/"):
+        return False
     return any(request.path.startswith(p) for p in protected_prefixes)
 
 
