@@ -176,15 +176,29 @@
             hideError();
             const btn = e.currentTarget;
             btn.disabled = true;
+            const inIframe = window.top !== window.self;
+
+            // If the popup gets silently blocked (no error thrown, just never
+            // opens), signInWithPopup's promise can hang forever with no
+            // feedback at all. Race it against a timeout so the user always
+            // gets a message instead of a dead button.
+            const timeout = new Promise((_, reject) =>
+                setTimeout(() => reject({ code: 'auth/popup-timeout' }), 8000)
+            );
+
             try {
-                await googleLogin();
+                await Promise.race([googleLogin(), timeout]);
                 window.location.href = '/';
             } catch (err) {
                 console.error('Google Login Error:', err?.code, err?.message);
                 if (err?.code === 'auth/popup-closed-by-user') {
                     // User closed the popup — not a real error, just reset silently.
-                } else if (err?.code === 'auth/popup-blocked') {
-                    showError('Your browser blocked the sign-in popup. Please allow popups for this site and try again.');
+                } else if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/popup-timeout') {
+                    if (inIframe) {
+                        showError('Sign-in is blocked inside this preview. Use the banner link at the top of the page to open the app directly, then try again.');
+                    } else {
+                        showError('Your browser blocked the sign-in popup. Please allow popups for this site and try again.');
+                    }
                 } else {
                     showError(err?.message || 'Google sign-in failed. Please try again.');
                 }
